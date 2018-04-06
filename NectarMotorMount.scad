@@ -27,12 +27,22 @@ module syringe(syringeDim, MinStickOut, MaxStickOut){
     
     cylinder(h = 30, d = syringeDim[0]); 
     translate([-syringeDim[1]/2, -syringeDim[2]/2, 0]) cube([syringeDim[1], syringeDim[2], 2]); 
-    translate([0, 0, -MaxStickOut]) cylinder(h = MaxStickOut, d = 7); 
+    translate([0, 0, -MaxStickOut]) cylinder(h = MaxStickOut, d = 9); 
     
 }
 
 
 
+
+
+//make actuall cutout a little bigger
+motorSize = [42, 42, 33]; 
+shaftDim = [9, 100]; 
+motorTop = [24, 3,3];
+
+syringeDim = [9, 12, 22]; 
+MinStickOut = 13; 
+MaxStickOut = 70; 
 
 difference(){
 translate([-25, -120, -5]) cube([50, 125, 50]); 
