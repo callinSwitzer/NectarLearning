@@ -56,7 +56,7 @@ vignettes/*.pdf
 *.png
 
 # any sub folders
-*/*
+# */*
 
 
 # Byte-compiled / optimized / DLL files
