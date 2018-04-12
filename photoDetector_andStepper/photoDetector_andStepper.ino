@@ -11,6 +11,7 @@ Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2);
 
 // define variable we'll read from python
 int val = 0;
+int lightPin = 0;  //define a pin for Photo resistor
 
 void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
@@ -39,7 +40,7 @@ void loop() {
     myMotor->release();  
     }
 
-  
+  Serial.println(analogRead(lightPin)); 
   //Serial.println("Single coil steps");
   //myMotor->step(500, FORWARD, SINGLE); 
   //myMotor->step(500, BACKWARD, SINGLE); 
