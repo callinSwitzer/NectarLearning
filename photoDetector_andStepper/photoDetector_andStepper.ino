@@ -11,7 +11,13 @@ Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2);
 
 // define variable we'll read from python
 int val = 0;
-int lightPin = 0;  //define a pin for Photo resistor
+int lightPin = A0;  //define a pin for Photo resistor
+int lightPin1 = A3;  //define a pin for Photo resistor
+int lightPin2 = A5;  //define a pin for Photo resistor
+int stepIn; 
+int ar1; 
+int ar2; 
+int ar3; 
 
 void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
@@ -24,6 +30,11 @@ void loop() {
 
   // read serial port
   val = Serial.read();
+
+  // put your main code here, to run repeatedly:
+  stepIn = digitalRead(7); 
+  Serial.print(stepIn *200 + 500); 
+  Serial.print(","); 
 
   // 102 = f  
    if (val == 98){
@@ -40,27 +51,17 @@ void loop() {
     myMotor->release();  
     }
 
-  Serial.println(analogRead(lightPin)); 
-  //Serial.println("Single coil steps");
-  //myMotor->step(500, FORWARD, SINGLE); 
-  //myMotor->step(500, BACKWARD, SINGLE); 
-  //myMotor-> release(); 
-//  delay(3000); 
-//
-//  Serial.println("running!"); 
-//
-//  //Serial.println("Double coil steps");
-//  myMotor->step(200, FORWARD, DOUBLE); 
-//  myMotor->step(200, BACKWARD, DOUBLE);
-//  
-//  // release so motor doesn't get too hot
-//  myMotor->release();
-  
-  //Serial.println("Interleave coil steps");
-  //myMotor->step(100, FORWARD, INTERLEAVE); 
-  //myMotor->step(100, BACKWARD, INTERLEAVE); 
-  
-  //Serial.println("Microstep steps");
-  //myMotor->step(500, FORWARD, MICROSTEP); 
-  //myMotor->step(500, BACKWARD, MICROSTEP);
+//  ar1 = analogRead(A2);
+//  Serial.print(ar1);
+//  Serial.print(",");
+//  //delay(10); 
+  ar2 = analogRead(A0); 
+  //delay(50); 
+  ar3 = analogRead(A1); 
+//  Serial.print(ar1); 
+//  Serial.print(",");
+  Serial.print(ar2);
+  Serial.print(",");
+  Serial.println(ar3); 
+
 }
