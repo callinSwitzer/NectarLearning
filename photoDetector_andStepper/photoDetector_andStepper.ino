@@ -34,10 +34,10 @@ void loop() {
 
   // put your main code here, to run repeatedly:
   stepIn = digitalRead(7); 
-  Serial.print(stepIn *10 + 30); 
+  Serial.print(stepIn *10 + 30); // limit switch
   Serial.print(","); 
   stepIn_bottom = digitalRead(6); 
-  Serial.print(stepIn_bottom *10 + 30); 
+  Serial.print(stepIn_bottom *10 + 30); // limit switch
   Serial.print(","); 
   
   
@@ -59,7 +59,7 @@ void loop() {
   else if (val == 99 && stepIn < 1) {
     centerup();
     }
-
+ // refref: only write a line if prompted by python
   ar1 = analogRead(A2);
   Serial.print(ar1);
   Serial.print(",");
@@ -105,7 +105,7 @@ void moveForward()
   stepIn_bottom = digitalRead(6); 
   //move forward a little bit
   if (stepIn_bottom < 1){
-   myMotor->step(40, BACKWARD, SINGLE);    
+   myMotor->step(20, BACKWARD, SINGLE);    
     // release motor so it doesn't get too hot!
    myMotor->release();
   }
@@ -118,7 +118,7 @@ void moveBackward()
   stepIn = digitalRead(7); 
   //move forward a little bit
   if (stepIn < 1){
-   myMotor->step(40, FORWARD, SINGLE);    
+   myMotor->step(20, FORWARD, SINGLE);    
     // release motor so it doesn't get too hot!
    myMotor->release();
   }
