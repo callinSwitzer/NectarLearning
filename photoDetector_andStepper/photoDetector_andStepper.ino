@@ -24,7 +24,7 @@ void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
   AFMS.begin();  // create with the default frequency 1.6KHz
   myMotor->setSpeed(100);  //  rpm   
-  Serial.println("Setup complete"); 
+  Serial.println(" Setup complete"); 
 }
 
 void loop() {
@@ -34,44 +34,45 @@ void loop() {
 
   // put your main code here, to run repeatedly:
   stepIn = digitalRead(7); 
-  Serial.print(stepIn *10 + 30); // limit switch
-  Serial.print(","); 
   stepIn_bottom = digitalRead(6); 
-  Serial.print(stepIn_bottom *10 + 30); // limit switch
-  Serial.print(","); 
-  
+  ar1 = analogRead(A2);
+  ar2 = analogRead(A0); 
+  ar3 = analogRead(A1); 
   
 
    // 98 = b
    if (val == 98){
-    Serial.println(val);
+    //Serial.println(val);
       moveBackward();
-  }
+    }
 
  
   // 102 = f  
   else if (val == 102) {
-    Serial.println(val);
+    //Serial.println(val);
     moveForward();
     }
 
-  // 99 = c
-  else if (val == 99 && stepIn < 1) {
-    centerup();
+  // refref: only write a line if prompted by python
+  // 114 = r
+  else if (val == 114) {
+    Serial.print(ar1);
+    Serial.print(",");
+    Serial.print(ar2);
+    Serial.print(",");
+    Serial.print(ar3);
+    Serial.print(",");
+    Serial.print(stepIn);
+    Serial.print(",");
+    Serial.println(stepIn_bottom);
     }
- // refref: only write a line if prompted by python
-  ar1 = analogRead(A2);
-  Serial.print(ar1);
-  Serial.print(",");
-//  //delay(10); 
-  ar2 = analogRead(A0); 
-  //delay(50); 
-  ar3 = analogRead(A1); 
-//  Serial.print(ar1); 
-//  Serial.print(",");
-  Serial.print(ar2);
-  Serial.print(",");
-  Serial.println(ar3); 
+
+
+  // move stepper all the way back, and then forward a little bit
+  // c = 99
+  else if (val == 99 && stepIn < 1){
+    centerup();
+  }
 
 }
 
@@ -105,7 +106,7 @@ void moveForward()
   stepIn_bottom = digitalRead(6); 
   //move forward a little bit
   if (stepIn_bottom < 1){
-   myMotor->step(20, BACKWARD, SINGLE);    
+   myMotor->step(5, BACKWARD, SINGLE);    
     // release motor so it doesn't get too hot!
    myMotor->release();
   }
@@ -118,7 +119,7 @@ void moveBackward()
   stepIn = digitalRead(7); 
   //move forward a little bit
   if (stepIn < 1){
-   myMotor->step(20, FORWARD, SINGLE);    
+   myMotor->step(10, FORWARD, SINGLE);    
     // release motor so it doesn't get too hot!
    myMotor->release();
   }
