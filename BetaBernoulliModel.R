@@ -1,3 +1,0 @@
-# Bayes Beta-Bernoulli Model
-
-
