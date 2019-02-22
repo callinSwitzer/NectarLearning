@@ -119,9 +119,8 @@ void moveBackward()
   stepIn = digitalRead(7); 
   //move forward a little bit
   if (stepIn < 1){
-   myMotor->step(10, FORWARD, SINGLE);    
+   myMotor->step(5, FORWARD, SINGLE);    
     // release motor so it doesn't get too hot!
    myMotor->release();
   }
 }
-
