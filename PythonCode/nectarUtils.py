@@ -262,6 +262,7 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
     timeOfLastVisit = time.time()
     minSinceLastVisit = 999
     ctr = 0
+
     
     # initialize nectar to correct level
     Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
@@ -500,7 +501,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual f"
+                tmp[0, 6] = "manual b"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -559,3 +560,38 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
 ######################################################################
 ## REFREF: Machine learning calibration
 ######################################################################
+def calibrate(serial_con):
+    '''
+    Calibrates the sensor
+
+
+
+    Returns: baseSensorThreshold to use in experiments
+    '''
+    # make sure that the experiment is ready:
+    ready = input("Is nectar at the end of the tube, and the tube inserted correctly? [y/n] ")
+    if ready[0].lower() != "y":
+        warnings.warn("Calibration not completed")
+        return(np.nan)
+    
+    # move nectar
+    else:
+        df = pd.DataFrame(columns=['a','b','c','d', 'e', 'f'], index=np.arange(0, 30))
+        tmp = np.empty((1, 6), dtype = '<U26')
+        for jj in range(df.shape[0]):
+            serial_con.write("bb".encode("utf-8"))
+            serial_con.write("r".encode("utf-8"))
+            txt = serial_con.readline().decode("utf-8")
+            #print(txt)
+            tmp[0, 0:5] = [int(i) for i in txt.split(',')]
+            tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+            df.loc[jj] = tmp[0,:]
+            
+        df['timestamp'] = pd.to_datetime(df['f'])
+        df.loc[:,['a','b','c','d', 'e']] = df.loc[:,['a','b','c','d', 'e']].apply(pd.to_numeric, errors='coerce')
+        
+    return(df)
+            
+#  # initialize nectar to correct level
+#     Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
+#                    saveData = False, saveFileName = "tmp", backAmt = 30)
