@@ -19,6 +19,10 @@ import shutil
 import sys
 from datetime import datetime
 
+# packages for calibration
+from sklearn.cluster import KMeans
+from scipy.signal import find_peaks
+
 
 
 ##############################################################
@@ -579,7 +583,8 @@ def calibrate(serial_con):
         df = pd.DataFrame(columns=['a','b','c','d', 'e', 'f'], index=np.arange(0, 30))
         tmp = np.empty((1, 6), dtype = '<U26')
         for jj in range(df.shape[0]):
-            serial_con.write("bb".encode("utf-8"))
+            if jj > 5:
+                serial_con.write("bb".encode("utf-8"))
             serial_con.write("r".encode("utf-8"))
             txt = serial_con.readline().decode("utf-8")
             #print(txt)
@@ -590,8 +595,73 @@ def calibrate(serial_con):
         df['timestamp'] = pd.to_datetime(df['f'])
         df.loc[:,['a','b','c','d', 'e']] = df.loc[:,['a','b','c','d', 'e']].apply(pd.to_numeric, errors='coerce')
         
-    return(df)
-            
+        calb = df
+        onsets = np.zeros(calb.shape[1]-2, dtype = 'int')
+        calb.columns = ['a', 'b', 'c', 'd', 'e', "time", "timestamp"]
+
+        for jj in range(calb.shape[1] - 2):
+
+            dat = calb.iloc[:, jj].rolling(window=3, min_periods = 1, center = True).var()
+            peaks, hts = find_peaks(dat, height=100)
+            #print(calb.columns[jj])
+            if(peaks.shape[0] > 0):
+                onsets[jj] = int(peaks[np.argmax(hts['peak_heights'])])
+                #dat.plot()
+                #plt.scatter(x = peaks[np.argmax(hts['peak_heights'])], y = hts["peak_heights"][np.argmax(hts['peak_heights'])])
+        #         calb.plot(y=['a', 'b', 'c', 'd', 'e'], style='-')
+        #         plt.vlines(x = peaks[np.argmax(hts['peak_heights'])], ymin = 0, ymax = 700)
+        #         plt.show()
+
+        medVals = [np.median(calb.iloc[:,jj]) for jj in range(5)]
+
+        columns = np.zeros(5, dtype = 'object')
+        columns[onsets.argsort()[3]], columns[onsets.argsort()[4]] = "mid", "base"
+        columns[(columns != "mid") & (columns !="base") & (np.array(medVals) > 2)] = "top"
+        columns[columns == 0] = "limit"
+
+        columns = np.hstack([columns, ["time_S", "time"]])
+
+        calb.columns = columns
+        calb.head()
+        calb.plot(y=['top', 'mid', 'base'], style='-')
+
+        kmc = KMeans(n_clusters = 2)
+        ctr2 = 0
+        colors = ["red", 'blue']
+        decBounds = {"base": "", "mid": ""}
+        for location in ["base", "mid"]:
+            classes = kmc.fit_predict(np.array(calb[location]).reshape(-1, 1))
+            decBound = np.abs(np.median(np.array(calb[location])[classes == 1]) - 
+                              np.median(np.array(calb[location])[classes == 0])).astype(int)
+            decBounds[location] = decBound
+            plt.plot(calb[location][classes == 0], 'bo', label = "")
+            plt.plot(calb[location][classes == 1], 'ro', label = "")
+            plt.hlines(y = decBound, xmin = 0, xmax = calb.shape[0], 
+                       linestyle = "--", color = colors[ctr2], label = "dec. bound. -" + str(location))
+            ctr2 += 1
+        plt.ylabel("sensor light reading")
+        plt.xlabel("sample number")
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
+                  fancybox=True, shadow=True, ncol=5)
+        print(decBounds)
+
+        # refref: return top sensor baseline, bottom sensor baseline, and mid sensor baseline.
+        return(decBounds)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 #  # initialize nectar to correct level
 #     Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
 #                    saveData = False, saveFileName = "tmp", backAmt = 30)
