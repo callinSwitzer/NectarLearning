@@ -72,7 +72,8 @@ def Reward(serial_con,
            dataDir = "Need Path",
            backAmt = 20,
            saveData = False, 
-           baseSensorThreshold = 300):
+           baseSensorThreshold = 300, 
+          baseSensorPosition = 2):
     """
     Moves nectar up the tube, so that it is accessible by the bees.
     
@@ -90,7 +91,8 @@ def Reward(serial_con,
         backAmt (int): number of additional steps back to take after reward
         saveData (logical): True means the data should be saved
         baseSensorThreshold (int): threshold where nectar is "seen" by base sensor
-        
+        baseSensorPosition (int): the column of the data the is the base sensor
+
     Returns: 
         None
     """
@@ -124,10 +126,9 @@ def Reward(serial_con,
                 
             # append to file
             if saveData:
-                if serial_con.port == "COM8":
-                    with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                        wr.writerows(tmp)
+                with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows(tmp)
 
             
         
@@ -147,11 +148,10 @@ def Reward(serial_con,
                 
             # append to file
             if saveData:
-                if serial_con.port == "COM8":
-                    with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                        wr.writerows(tmp)
-                        #print("Data written", tmp[0,5])
+                with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows(tmp)
+                    #print("Data written", tmp[0,5])
 
         
 
@@ -182,10 +182,9 @@ def Reward(serial_con,
                 
             # append to file
             if saveData:
-                if serial_con.port == "COM8":
-                    with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                        wr.writerows(tmp)
+                with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows(tmp)
 
         
         # we must wait for the motor to stop moving
@@ -203,10 +202,9 @@ def Reward(serial_con,
             
             # append to file
             if saveData:
-                if serial_con.port == "COM8":
-                    with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                        wr.writerows(tmp)
+                with open(os.path.join(dataDir, saveFileName), 'a+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows(tmp)
 
             
             # notify if limit switch is hit
@@ -216,15 +214,16 @@ def Reward(serial_con,
                
                 
             # note: tmp[0,2] is the base sensor for COM8
-            if int(tmp[0, 2]) < baseSensorThreshold:
+            # refref
+            if int(tmp[0, baseSensorPosition]) < baseSensorThreshold:
                 break
                              
             serial_con.write("ff".encode("utf-8"))
             time.sleep(0.1)
             
         # warning if nectar never reaches the bottom sensor
-        if int(tmp[0, 2]) > 300:
-            warnings.warn("Check Nectar -- it may be too low")
+        if int(tmp[0, baseSensorPosition]) > baseSensorThreshold:
+            warnings.warn("Check Nectar -- it may be too low!!")
 
 
             
@@ -240,7 +239,10 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 returnVals = True, saveData = True, 
                 dataDir = "Need Path", timeout = 10, 
                reward = True, 
-               minRewardThreshold = 150):
+               minRewardThreshold = 150, 
+               colNames = "", 
+               baseSensorThreshold = 300, 
+               calibrationInfo = "" ):
     
     """
     Reads data from Arduino, saves each line to a file
@@ -254,6 +256,11 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
     timeout (int): number of seconds to continue recording, if there is no action
     reward (logical): should the bee be rewarded
     minRewardThreshold (int): minimum value top sensor must reach in order to reward again
+    colNames (array): names of columns to be saved in file
+    baseSensorThreshold (int): threshold where nectar is "seen" by base sensor (passed to "Reward" fxn)
+    calibrationInfo (dict): calibration information (saved to first line of csv file)
+    
+
     
     Returns: 
     array: data from the most recent 10 readings 
@@ -261,32 +268,52 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
     """
 
     startTime = time.time()
-    tmp = np.empty((1, 7), dtype = '<U26')
+    tmp = np.empty((1, 7), dtype = '<U260')
     topSensorLastData = 999
     timeOfLastVisit = time.time()
     minSinceLastVisit = 999
     ctr = 0
 
     
+    
+    topSensorPosition = np.where(colNames == "top")[0][0]
+    baseSensorPosition = np.where(colNames == "base")[0][0]
+    
     # initialize nectar to correct level
     Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
-                   saveData = False, saveFileName = "tmp", backAmt = 30)
+                   saveData = False, saveFileName = "tmp", backAmt = 30, 
+          baseSensorThreshold = baseSensorThreshold, 
+          baseSensorPosition = baseSensorPosition)
     
-    
-    if serial_con.port == "COM8":
-        topSensorPosition = 1
-    
+
+
+       
     
     while msvcrt.kbhit():
         msvcrt.getch()
         print('clearing characters ...')
     
-    while (time.time() - startTime) < maxTime:    
+    while (time.time() - startTime) < maxTime: 
+        
+        # print time
+        if np.mod(ctr, 1000) == 0:
+            print(np.round(time.time() - startTime), "seconds elapsed")
+        
         serial_con.write("r".encode("utf-8"))
         txt = serial_con.readline().decode("utf-8")
         tmp[0, 0:5] = [int(i) for i in txt.split(',')]
         tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
+        
+        # if baseline gets too high (i.e. nectar is going down), reset it
+        if int(tmp[0, baseSensorPosition]) > calibrationInfo['base_dec_bound']:
+            print("Nectar is drifting -- resetting")
+            Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
+                       saveData = saveData, saveFileName = s,  backAmt = 30,
+                   baseSensorThreshold = baseSensorThreshold, 
+                      baseSensorPosition = baseSensorPosition)
+            tmp[0, -1:] = "auto-reset nectar position"
+            
         
         time.sleep(wait_time)
         
@@ -295,17 +322,22 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 s = tmp[0, 5]
                 s = re.sub(r'[^\w\s]','_',s)
                 s = re.sub(" ", "__", s)[0:] + ".csv"
-                if serial_con.port == "COM8":
-                    with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                        wr.writerows([np.array(["mid_sensor", "top_sensor", "base_sensor", 
-                                               "limit_1", "limit_2", "timestamp", "notes"], dtype = '<U26')])
-                #refref add COM7        
+                
+                # add colnames
+                with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows([np.hstack([colNames[0:3], 
+                                            ["limit_1", "limit_2", "timestamp", "notes"]]).astype('<U26')])       
                         
                     
             with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
                 wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                if ctr == 0:
+                    tmp[0, -1:] = str(calibrationInfo)
                 wr.writerows(tmp)
+        
+        # reset notes
+        tmp[0, -1:] = ""
         
         # stop if there is no action for XX sec
         if (topSensorLastData - int(tmp[0, topSensorPosition]) < -2) and (ctr > 0):
@@ -313,10 +345,11 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
             timeOfLastVisit = time.time()
             #  reward bee
             # refref: only reward bee if bee has pulled out of flower before last visit
-            
             if minSinceLastVisit < minRewardThreshold:
+                
                 Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
-                       saveData = saveData, saveFileName = s)
+                       saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
+                      baseSensorPosition = baseSensorPosition)
                 # reset min threshold to high
                 minSinceLastVisit = 999
             
@@ -348,15 +381,14 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual f"
+                tmp[0, 6] = "manual b"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
                 if saveData:
-                    if serial_con.port == "COM8":
-                        with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                            wr.writerows(tmp)
+                    with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr.writerows(tmp)
                             
             elif (k == b'f'):
                 serial_con.write("ff".encode("utf-8"))
@@ -370,10 +402,9 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
             
                 # append to file
                 if saveData:
-                    if serial_con.port == "COM8":
-                        with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                            wr.writerows(tmp)
+                    with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr.writerows(tmp)
                 
             elif (k == b'r'):
                 
@@ -387,14 +418,14 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
             
                 # append to file
                 if saveData:
-                    if serial_con.port == "COM8":
-                        with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                            wr.writerows(tmp)
+                    with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr.writerows(tmp)
                 
                 #  manually reward bee
                 Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
-                       saveData = saveData, saveFileName = s)
+                       saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
+                      baseSensorPosition = baseSensorPosition)
             # reset note column
             tmp[0, 6] = ""
         #print(minSinceLastVisit)
@@ -413,7 +444,8 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
 
 def readOnly(serial_con, maxTime = 5, wait_time = 0, 
                 returnVals = True, saveData = True, 
-                dataDir = "Need Path", timeout = 10):
+                dataDir = "Need Path", timeout = 10, 
+            colNames = ""):
     
     """
     Reads data from Arduino, saves each line to a file
@@ -425,6 +457,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
     saveData (logical): True means save data (in dataDir)
     dataDir (diretory): folder where data are stored
     timeout (int): number of seconds to continue recording, if there is no action
+    colNames (array): names of columns to be saved in file
     
     Returns: 
     array: data from the most recent 10 readings 
@@ -438,6 +471,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
     minSinceLastVisit = 999
     ctr = 0
     
+    # refref: update this
     if serial_con.port == "COM8":
         topSensorPosition = 1
     
@@ -460,12 +494,12 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 s = tmp[0, 5]
                 s = re.sub(r'[^\w\s]','_',s)
                 s = re.sub(" ", "__", s)[0:] + ".csv"
-                if serial_con.port == "COM8":
-                    with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                        wr.writerows([np.array(["mid_sensor", "top_sensor", "base_sensor", 
-                                               "limit_1", "limit_2", "timestamp", "notes"], dtype = '<U26')])
-                #refref add COM7        
+                
+                # refref update here
+                with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows(np.hstack([colNames[0:3], 
+                                            ["limit_1", "limit_2", "timestamp", "notes"]]).astype('<U26'))   
                         
                     
             with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
@@ -570,7 +604,7 @@ def calibrate(serial_con):
 
 
 
-    Returns: baseSensorThreshold to use in experiments
+    Returns: baseSensorThreshold to use in experiments, list of column names
     '''
     # make sure that the experiment is ready:
     ready = input("Is nectar at the end of the tube, and the tube inserted correctly? [y/n] ")
@@ -580,7 +614,7 @@ def calibrate(serial_con):
     
     # move nectar
     else:
-        df = pd.DataFrame(columns=['a','b','c','d', 'e', 'f'], index=np.arange(0, 30))
+        df = pd.DataFrame(columns=['a','b','c','d', 'e', 'f'], index=np.arange(0, 40))
         tmp = np.empty((1, 6), dtype = '<U26')
         for jj in range(df.shape[0]):
             if jj > 5:
@@ -628,11 +662,15 @@ def calibrate(serial_con):
         kmc = KMeans(n_clusters = 2)
         ctr2 = 0
         colors = ["red", 'blue']
-        decBounds = {"base": "", "mid": ""}
+        decBounds = {"base": "", "mid": "", 
+                     "topBaseline": "", "midBaseline": "", "baseBaseline": "", 
+                    "colNames": "", 
+                    "port": serial_con.port}
         for location in ["base", "mid"]:
             classes = kmc.fit_predict(np.array(calb[location]).reshape(-1, 1))
-            decBound = np.abs(np.median(np.array(calb[location])[classes == 1]) - 
-                              np.median(np.array(calb[location])[classes == 0])).astype(int)
+            decBound = np.abs((np.median(np.array(calb[location])[classes == 1]) + 
+                              np.median(np.array(calb[location])[classes == 0])) / 2).astype(int)
+            
             decBounds[location] = decBound
             plt.plot(calb[location][classes == 0], 'bo', label = "")
             plt.plot(calb[location][classes == 1], 'ro', label = "")
@@ -643,9 +681,23 @@ def calibrate(serial_con):
         plt.xlabel("sample number")
         plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
                   fancybox=True, shadow=True, ncol=5)
+        
+        # refref: return top sensor baseline, bottom sensor baseline, and mid sensor baseline, column names
+        decBounds["topBaseline"] = np.mean(calb["top"][0:])
+        decBounds["midBaseline"] = np.mean(calb["mid"][0:4])
+        decBounds["baseBaseline"] = np.mean(calb["base"][0:4])
+        decBounds["colNames"] = np.array(calb.columns)[0:5]
+        
+        if np.abs(np.max(calb["top"]) - np.min(calb["top"])) > 10:
+            warnings.warn("Top sensor changed during calibration -- may need to recalibrate")
+        
+        # rename keys
+        decBounds["base_dec_bound"] = decBounds.pop("base")
+        decBounds["mid_dec_bound"] = decBounds.pop("mid")
+        
         print(decBounds)
 
-        # refref: return top sensor baseline, bottom sensor baseline, and mid sensor baseline.
+        
         return(decBounds)
 
     
