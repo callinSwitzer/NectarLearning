@@ -607,9 +607,11 @@ def calibrate(serial_con):
     Returns: baseSensorThreshold to use in experiments, list of column names
     '''
     # make sure that the experiment is ready:
-    ready = input("Is nectar at the end of the tube, and the tube inserted correctly? [y/n] ")
-    if ready[0].lower() != "y":
-        warnings.warn("Calibration not completed")
+#     ready = input("Is nectar at the end of the tube, and the tube inserted correctly? [y/n] ")
+#     if ready[0].lower() != "y":
+#         warnings.warn("Calibration not completed")
+#         return(np.nan)
+    if False:
         return(np.nan)
     
     # move nectar
