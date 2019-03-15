@@ -12,4 +12,4 @@ Jupyter notebooks are used to communicate with Arduinos to collect data
 # TODO:
 1. Write script to run nectar feeders in parallel
 2. Merge data together (from both feeders, even though time is not synched)
-3. Include video on trials
+3. Include video on trials -- maybe wirte a bash script to run the cameras (maybe as a differnt process)

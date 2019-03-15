@@ -101,7 +101,8 @@ def Reward(serial_con,
     if nectarState != "low":
         print('Nectar is not in the correct position')
     else:
-        tmp = np.empty((1, 7), dtype = '<U26')
+        tmp = np.empty((1, 8), dtype = '<U26')
+        tmp[0, 6] = serial_con.port
         
         # move forward
         for ii in range(numSteps):
@@ -115,9 +116,9 @@ def Reward(serial_con,
             tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
             
             if ii == 0:
-                tmp[0, 6] = "reward Triggered"
+                tmp[0, 7] = "reward Triggered"
             else:
-                tmp[0,6] = ""
+                tmp[0,7] = ""
                 
             # notify if limit switch is hit
             if (tmp[0, 3] == "1") or (tmp[0, 4] == "1"):
@@ -235,16 +236,18 @@ def Reward(serial_con,
 # also do rewards
 ##############################################################
 
-def readAndSave(serial_con, maxTime = 600, wait_time = 0, 
+def readAndSave(serial_con = None, maxTime = 600, wait_time = 0, 
                 returnVals = True, saveData = True, 
                 dataDir = "Need Path", timeout = 10, 
                reward = True, 
-               minRewardThreshold = 150, 
-               colNames = "", 
-               baseSensorThreshold = 300, 
                calibrationInfo = "" ):
     
     """
+    ## refref: could remove minReward thresh, 
+    colnames, 
+    baseSensorThreshold
+    and just keep calibration
+    
     Reads data from Arduino, saves each line to a file
   
     Parameters: 
@@ -255,9 +258,6 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
     dataDir (diretory): folder where data are stored
     timeout (int): number of seconds to continue recording, if there is no action
     reward (logical): should the bee be rewarded
-    minRewardThreshold (int): minimum value top sensor must reach in order to reward again
-    colNames (array): names of columns to be saved in file
-    baseSensorThreshold (int): threshold where nectar is "seen" by base sensor (passed to "Reward" fxn)
     calibrationInfo (dict): calibration information (saved to first line of csv file)
     
 
@@ -268,14 +268,17 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
     """
 
     startTime = time.time()
-    tmp = np.empty((1, 7), dtype = '<U260')
+    tmp = np.empty((1, 8), dtype = '<U260')
+    tmp[0, 6] = serial_con.port
     topSensorLastData = 999
     timeOfLastVisit = time.time()
     minSinceLastVisit = 999
     ctr = 0
 
     
-    
+    minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
+    colNames = calibrationInfo["colNames"] 
+    baseSensorThreshold = calibrationInfo['base_dec_bound']
     topSensorPosition = np.where(colNames == "top")[0][0]
     baseSensorPosition = np.where(colNames == "base")[0][0]
     
@@ -327,13 +330,15 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
                     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
                     wr.writerows([np.hstack([colNames[0:3], 
-                                            ["limit_1", "limit_2", "timestamp", "notes"]]).astype('<U26')])       
+                                            ["limit_1", "limit_2", "timestamp", "port", "notes"]]).astype('<U26')])       
                         
                     
             with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
                 wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
                 if ctr == 0:
-                    tmp[0, -1:] = str(calibrationInfo)
+                    calCopy = calibrationInfo.copy() 
+                    calCopy.pop("calbData") # remove the calbData key from the dict
+                    tmp[0, -1:] = str(calCopy)
                 wr.writerows(tmp)
         
         # reset notes
@@ -381,7 +386,7 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual b"
+                tmp[0, 7] = "manual b"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -397,7 +402,7 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual f"
+                tmp[0, 7] = "manual f"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -413,7 +418,7 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual reward"
+                tmp[0, 7] = "manual reward"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -427,12 +432,12 @@ def readAndSave(serial_con, maxTime = 600, wait_time = 0,
                        saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
                       baseSensorPosition = baseSensorPosition)
             # reset note column
-            tmp[0, 6] = ""
+            tmp[0, 7] = ""
         #print(minSinceLastVisit)
         ctr += 1
     # read in data, if returnVals is True
     if returnVals and saveData: 
-        return(pd.read_csv(os.path.join(dataDir, s)))
+        return(pd.read_csv(os.path.join(dataDir, s)), s)
     
 
     
@@ -465,7 +470,8 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
     """
 
     startTime = time.time()
-    tmp = np.empty((1, 7), dtype = '<U26')
+    tmp = np.empty((1, 8), dtype = '<U26')
+    tmp[0, 7] = serial_con.port
     topSensorLastData = 999
     timeOfLastVisit = time.time()
     minSinceLastVisit = 999
@@ -499,7 +505,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
                     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
                     wr.writerows(np.hstack([colNames[0:3], 
-                                            ["limit_1", "limit_2", "timestamp", "notes"]]).astype('<U26'))   
+                                            ["limit_1", "limit_2", "timestamp", "notes", "port"]]).astype('<U26'))   
                         
                     
             with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
@@ -539,7 +545,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual b"
+                tmp[0, 7] = "manual b"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -556,7 +562,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual f"
+                tmp[0, 7] = "manual f"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -573,7 +579,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 #print(txt)
                 tmp[0, 0:5] = [int(i) for i in txt.split(',')]
                 tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 6] = "manual reward"
+                tmp[0, 7] = "manual reward"
                 minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
             
                 # append to file
@@ -587,7 +593,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
                 Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
                        saveData = saveData, saveFileName = s)
             # reset note column
-            tmp[0, 6] = ""
+            tmp[0, 7] = ""
         #print(minSinceLastVisit)
         ctr += 1
     # read in data, if returnVals is True
@@ -596,7 +602,7 @@ def readOnly(serial_con, maxTime = 5, wait_time = 0,
     
     
 ######################################################################
-## REFREF: Machine learning calibration
+##  Machine learning calibration
 ######################################################################
 def calibrate(serial_con):
     '''
@@ -628,6 +634,10 @@ def calibrate(serial_con):
             tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
             df.loc[jj] = tmp[0,:]
             
+            if int(tmp[0, 3]) == 1 or int(tmp[0, 4]) == 1:
+                print("Limit switch hit")
+                return(np.nan)
+            
         df['timestamp'] = pd.to_datetime(df['f'])
         df.loc[:,['a','b','c','d', 'e']] = df.loc[:,['a','b','c','d', 'e']].apply(pd.to_numeric, errors='coerce')
         
@@ -639,7 +649,6 @@ def calibrate(serial_con):
 
             dat = calb.iloc[:, jj].rolling(window=3, min_periods = 1, center = True).var()
             peaks, hts = find_peaks(dat, height=100)
-            #print(calb.columns[jj])
             if(peaks.shape[0] > 0):
                 onsets[jj] = int(peaks[np.argmax(hts['peak_heights'])])
                 #dat.plot()
@@ -648,6 +657,13 @@ def calibrate(serial_con):
         #         plt.vlines(x = peaks[np.argmax(hts['peak_heights'])], ymin = 0, ymax = 700)
         #         plt.show()
 
+        # if there is not enough nectar movement, quit
+        if np.sum(np.array(onsets) != 0) < 2:
+            numSeen = str(np.sum(np.array(onsets) != 0))
+            print("Nectar movement detected by " + numSeen + 
+                  " detector(s) on " + serial_con.port + ". Should be 2.")
+            return(np.nan)
+            
         medVals = [np.median(calb.iloc[:,jj]) for jj in range(5)]
 
         columns = np.zeros(5, dtype = 'object')
@@ -659,11 +675,11 @@ def calibrate(serial_con):
 
         calb.columns = columns
         calb.head()
-        calb.plot(y=['top', 'mid', 'base'], style='-')
+        # calb.plot(y=['top', 'mid', 'base'], style='-')
 
         kmc = KMeans(n_clusters = 2)
-        ctr2 = 0
-        colors = ["red", 'blue']
+#         ctr2 = 0
+#         colors = ["red", 'blue']
         decBounds = {"base": "", "mid": "", 
                      "topBaseline": "", "midBaseline": "", "baseBaseline": "", 
                     "colNames": "", 
@@ -672,17 +688,17 @@ def calibrate(serial_con):
             classes = kmc.fit_predict(np.array(calb[location]).reshape(-1, 1))
             decBound = np.abs((np.median(np.array(calb[location])[classes == 1]) + 
                               np.median(np.array(calb[location])[classes == 0])) / 2).astype(int)
-            
+            calb[location + "_classes"] = classes
             decBounds[location] = decBound
-            plt.plot(calb[location][classes == 0], 'bo', label = "")
-            plt.plot(calb[location][classes == 1], 'ro', label = "")
-            plt.hlines(y = decBound, xmin = 0, xmax = calb.shape[0], 
-                       linestyle = "--", color = colors[ctr2], label = "dec. bound. -" + str(location))
-            ctr2 += 1
-        plt.ylabel("sensor light reading")
-        plt.xlabel("sample number")
-        plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
-                  fancybox=True, shadow=True, ncol=5)
+#             plt.plot(calb[location][classes == 0], 'bo', label = "")
+#             plt.plot(calb[location][classes == 1], 'ro', label = "")
+#             plt.hlines(y = decBound, xmin = 0, xmax = calb.shape[0], 
+#                        linestyle = "--", color = colors[ctr2], label = "dec. bound. -" + str(location))
+#             ctr2 += 1
+#         plt.ylabel("sensor light reading")
+#         plt.xlabel("sample number")
+#         plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2),
+#                   fancybox=True, shadow=True, ncol=5)
         
         # refref: return top sensor baseline, bottom sensor baseline, and mid sensor baseline, column names
         decBounds["topBaseline"] = np.mean(calb["top"][0:])
@@ -696,19 +712,45 @@ def calibrate(serial_con):
         # rename keys
         decBounds["base_dec_bound"] = decBounds.pop("base")
         decBounds["mid_dec_bound"] = decBounds.pop("mid")
+        decBounds["calbData"] = calb
         
-        print(decBounds)
-
+#         print(decBounds)
+#         plt.show()
         
         return(decBounds)
 
     
     
+def plotCalibration(calibName):
+    '''
+    Plots calibration data (must have already conducted calibration)
+    '''
+    calibName["calbData"].plot(y = ["top", "mid", "base"])
+    plt.hlines(y = calibName["base_dec_bound"], xmin = 0, xmax = len(calibName["calbData"]), 
+               linestyle = "--", color = 'r', label = "base_dec_bound")
+    plt.hlines(y = calibName["mid_dec_bound"], xmin = 0, xmax = len(calibName["calbData"]), 
+               linestyle = "--", color = 'k', label = "mid_dec_bound")
+    plt.ylabel("sensor light reading")
+    plt.xlabel("sample number")
+    plt.legend(loc='center right', bbox_to_anchor=(1.4, 0.5), ncol=1, title=calibName['port'])
+    plt.show() 
     
     
     
+# plot data
+def plotTrial(trialData):
+    '''
+    Plots data from one trial
+    '''
     
-    
+    trialData['timestamp'] = pd.to_datetime(trialData['timestamp'])
+    #trialData['delta'] = (trialData['timestamp']-trialData['timestamp'].shift()).fillna(pd.Timedelta(seconds=0))
+
+    trialData.plot(y=['top', 'mid', 'base'], x = "timestamp", style='-', figsize=np.array([15, 5]))
+
+    plt.scatter(y=trialData['top'], x = trialData["timestamp"])
+    plt.vlines(trialData[trialData.notes == "reward Triggered"]["timestamp"], ymin = 0, ymax = 1000, label = "reward")
+    plt.show()
     
     
     
