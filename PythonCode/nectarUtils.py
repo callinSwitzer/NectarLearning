@@ -19,9 +19,13 @@ import shutil
 import sys
 from datetime import datetime
 
+import threading
+import queue
+
+
 # packages for calibration
 from sklearn.cluster import KMeans
-from scipy.signal import find_peaks
+import peakutils
 
 
 
@@ -648,9 +652,11 @@ def calibrate(serial_con):
         for jj in range(calb.shape[1] - 2):
 
             dat = calb.iloc[:, jj].rolling(window=3, min_periods = 1, center = True).var()
-            peaks, hts = find_peaks(dat, height=100)
+            # peaks, hts = find_peaks(dat, height=100)
+            peaks= np.array(peakutils.indexes(dat, thres=0.5, min_dist=2))
+            hts = np.array(dat[peaks])
             if(peaks.shape[0] > 0):
-                onsets[jj] = int(peaks[np.argmax(hts['peak_heights'])])
+                onsets[jj] = peaks[np.argmax(hts)]
                 #dat.plot()
                 #plt.scatter(x = peaks[np.argmax(hts['peak_heights'])], y = hts["peak_heights"][np.argmax(hts['peak_heights'])])
         #         calb.plot(y=['a', 'b', 'c', 'd', 'e'], style='-')
@@ -658,10 +664,11 @@ def calibrate(serial_con):
         #         plt.show()
 
         # if there is not enough nectar movement, quit
+
         if np.sum(np.array(onsets) != 0) < 2:
             numSeen = str(np.sum(np.array(onsets) != 0))
             print("Nectar movement detected by " + numSeen + 
-                  " detector(s) on " + serial_con.port + ". Should be 2.")
+                  " detector(s) on " + serial_con.port + ". Should be 2.\n")
             return(np.nan)
             
         medVals = [np.median(calb.iloc[:,jj]) for jj in range(5)]
@@ -707,7 +714,7 @@ def calibrate(serial_con):
         decBounds["colNames"] = np.array(calb.columns)[0:5]
         
         if np.abs(np.max(calb["top"]) - np.min(calb["top"])) > 10:
-            warnings.warn("Top sensor changed during calibration -- may need to recalibrate")
+            warnings.warn(str(serial_con.port) + ": Top sensor changed during calibration -- may need to recalibrate")
         
         # rename keys
         decBounds["base_dec_bound"] = decBounds.pop("base")
@@ -754,10 +761,50 @@ def plotTrial(trialData):
     
     
     
+def enthread_calib(target, args):
+    q = queue.Queue()
+    def wrapper():
+        q.put(target(*args))
+    t = threading.Thread(target=wrapper)
+    t.start()
+    return(q)    
     
-    
-    
-    
+def multiCalibrate(*serialPorts):
+    qs = [enthread_calib(target = calibrate, args=(serialP,)) for serialP in serialPorts]
+    cals = [qs[ii].get(timeout=10) for ii in range(len(qs))]
+    if len(cals) == 1:
+        cals = cals[0]
+    return(cals)
+
+
+def enthread_read(target, kwargs):
+    q = queue.Queue()
+    def wrapper():
+        q.put(target(**kwargs))
+    t = threading.Thread(target=wrapper)
+    t.start()
+    return(q)
+
+def multiReadAndSave(ser1, ser2, cal1, cal2,
+                     dataDir = "dataDir", maxTime = 15):
+
+    q1 = enthread_read(target = readAndSave, 
+                  kwargs={ "serial_con" : ser1, 
+                           "calibrationInfo" : cal1 , 
+                           "dataDir" : dataDir, 
+                           "timeout" : 100, 
+                           "maxTime" : maxTime})
+    q2 = enthread_read(target = readAndSave, 
+                  kwargs={ "serial_con" : ser2, 
+                           "calibrationInfo" : cal2 ,
+                           "dataDir" : dataDir, 
+                           "timeout" : 100,
+                           "maxTime" : maxTime})
+
+    dat1, dat1_file = q1.get(timeout=35)
+    dat2, dat2_file = q2.get(timeout=35)
+
+    return(dat1, dat1_file, dat2, dat2_file)
 #  # initialize nectar to correct level
 #     Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
 #                    saveData = False, saveFileName = "tmp", backAmt = 30)
