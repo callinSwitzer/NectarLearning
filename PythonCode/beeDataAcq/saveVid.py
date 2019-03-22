@@ -27,13 +27,18 @@ def saveAviHelper2(conn, cam, cam2, fileFormat, fileName, fileName2, frameRate, 
         try:
             image = cam.retrieveBuffer()
             image2 = cam2.retrieveBuffer()
+            
+## refref: here is where I could do some image processing with opencv
+## refref: write to dataset -- timestamp, camera1BeeInFrame, camera2BeeInFrame
+            
+            
         except fc2.Fc2error as fc2Err:
             print("Error retrieving buffer : ", fc2Err)
             continue
 
         print("Grabbed image {}".format(i))
         
-        # check connection
+        # check connection, and break of something is received
         if conn.poll():
             print(str(i) + str(conn.recv()))
             for jj in range(10):
@@ -108,8 +113,12 @@ def main(conn, directory = "C:\\Users\\Combes4\\Desktop\\TempVids"):
     movieID = str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S_%f")[:-3])
     fileName = os.path.join(directory,   movieID + "_cam1" + ".avi")
     fileName2 = os.path.join(directory,  movieID + "_cam2" + ".avi")
+    conn.send(os.path.join(directory,   movieID))
     saveAviHelper2(conn, c,d, "AVI", fileName.encode("utf-8"), fileName2.encode("utf-8"), 10, maxImgs = 10000)
 
+
+    
+    
 if __name__ == "__main__":
     main(directory)
    

@@ -44,7 +44,7 @@ def img2array(image):
 
     
 # display images via live preview for two cameras
-def livePreview2(c, d):
+def livePreview2(conn, c, d):
     
     '''
     Previews images from two cameras --  triggered with arduino
@@ -90,6 +90,14 @@ def livePreview2(c, d):
                     cv2.destroyAllWindows()
                 print("keyboard break")
                 break
+                
+        # check connection, and break of something is received
+        if conn.poll():
+            print(str(conn.recv()))
+            for jj in range(10):
+                cv2.destroyAllWindows()
+            break
+
 
 
 def main(conn):    
@@ -119,7 +127,7 @@ def main(conn):
     d.startCapture()
     
     # live preview
-    livePreview2(c,d)
+    livePreview2(conn, c,d)
     
     # When everything done, release the capture
     #c.stopCapture()
