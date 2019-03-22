@@ -12,7 +12,6 @@ import skimage.io as io
 import msvcrt
 
 
-
 def printCameraInfo(cam):
     camInfo = cam.getCameraInfo()
     print("\n*** CAMERA INFORMATION ***\n")
@@ -39,6 +38,8 @@ def enableEmbeddedTimeStamp(cam, enableTimeStamp):
     
 def img2array(image):
     return(np.array(image.getData(), dtype="uint8").reshape( (image.getRows(), image.getCols()) ))
+
+
 
 
     
@@ -85,12 +86,13 @@ def livePreview2(c, d):
         if msvcrt.kbhit(): # if q, or escape is pressed, then break
             k = msvcrt.getch()
             if(k == b'q') | (k == b'\x1b') | (k == b'\x0b') :
+                for jj in range(10):
+                    cv2.destroyAllWindows()
                 print("keyboard break")
                 break
 
 
-
-def main():    
+def main(conn):    
     # check number of cameras
     bus = fc2.BusManager()
     numCams = bus.getNumOfCameras()
@@ -118,7 +120,6 @@ def main():
     
     # live preview
     livePreview2(c,d)
-    
     
     # When everything done, release the capture
     #c.stopCapture()

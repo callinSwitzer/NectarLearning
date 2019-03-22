@@ -801,10 +801,10 @@ def multiReadAndSave(ser1, ser2, cal1, cal2,
                            "timeout" : 100,
                            "maxTime" : maxTime})
 
+    # refref: will need to change timeout when I do full trials
     dat1, dat1_file = q1.get(timeout=35)
     dat2, dat2_file = q2.get(timeout=35)
 
     return(dat1, dat1_file, dat2, dat2_file)
-#  # initialize nectar to correct level
-#     Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
-#                    saveData = False, saveFileName = "tmp", backAmt = 30)
+
+

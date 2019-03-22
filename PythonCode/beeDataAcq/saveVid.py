@@ -14,24 +14,8 @@ import skimage.io as io
 import beeDataAcq.cameraSetup as cs
 
 
-# avi recording function
-bus = fc2.BusManager()
-numCams = bus.getNumOfCameras()
-    
-    
-c = fc2.Camera()
-c.connect(bus.getCameraFromIndex(0))
-d = fc2.Camera()
-d.connect(bus.getCameraFromIndex(1))
 
-# start capture
-cs.enableEmbeddedTimeStamp(c, True)
-c.startCapture()
-cs.enableEmbeddedTimeStamp(c, True)
-d.startCapture()
-
-
-def saveAviHelper2(cam, cam2, fileFormat, fileName, fileName2, frameRate, maxImgs = 500):
+def saveAviHelper2(conn, cam, cam2, fileFormat, fileName, fileName2, frameRate, maxImgs = 500):
     
     numImages = 0
 
@@ -48,6 +32,14 @@ def saveAviHelper2(cam, cam2, fileFormat, fileName, fileName2, frameRate, maxImg
             continue
 
         print("Grabbed image {}".format(i))
+        
+        # check connection
+        if conn.poll():
+            print(str(i) + str(conn.recv()))
+            for jj in range(10):
+                cv2.destroyAllWindows()
+            break
+
 
         if (i == 0):
             if fileFormat == "AVI":
@@ -68,6 +60,7 @@ def saveAviHelper2(cam, cam2, fileFormat, fileName, fileName2, frameRate, maxImg
 
             # Display the resulting frame
             cv2.imshow('image', img)
+            
 
         # break when "q" is pressed on keyboard
         k = cv2.waitKey(1) & 0xFF
@@ -92,14 +85,30 @@ def saveAviHelper2(cam, cam2, fileFormat, fileName, fileName2, frameRate, maxImg
     avi.close()
     avi2.close()
     
-def main(directory = "C:\\Users\\Combes4\\Desktop\\TempVids"):
+def main(conn, directory = "C:\\Users\\Combes4\\Desktop\\TempVids"):
+    # avi recording function
+    bus = fc2.BusManager()
+    numCams = bus.getNumOfCameras()
+
+
+    c = fc2.Camera()
+    c.connect(bus.getCameraFromIndex(0))
+    d = fc2.Camera()
+    d.connect(bus.getCameraFromIndex(1))
+
+    # start capture
+    cs.enableEmbeddedTimeStamp(c, True)
+    c.startCapture()
+    cs.enableEmbeddedTimeStamp(c, True)
+    d.startCapture()
+    
     if not os.path.exists(directory):
         os.makedirs(directory)
     #directory = os.path.join("C:\\Users\\Combes4\Desktop\\temp3")
     movieID = str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S_%f")[:-3])
     fileName = os.path.join(directory,   movieID + "_cam1" + ".avi")
     fileName2 = os.path.join(directory,  movieID + "_cam2" + ".avi")
-    saveAviHelper2(c,d, "AVI", fileName.encode("utf-8"), fileName2.encode("utf-8"), 10, maxImgs = 10000)
+    saveAviHelper2(conn, c,d, "AVI", fileName.encode("utf-8"), fileName2.encode("utf-8"), 10, maxImgs = 10000)
 
 if __name__ == "__main__":
     main(directory)
