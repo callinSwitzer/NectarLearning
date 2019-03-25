@@ -23,6 +23,7 @@ import threading
 import queue
 
 
+
 # packages for calibration
 from sklearn.cluster import KMeans
 import peakutils
@@ -650,13 +651,19 @@ def calibrate(serial_con):
         calb.columns = ['a', 'b', 'c', 'd', 'e', "time", "timestamp"]
 
         for jj in range(calb.shape[1] - 2):
-
             dat = calb.iloc[:, jj].rolling(window=3, min_periods = 1, center = True).var()
             # peaks, hts = find_peaks(dat, height=100)
             peaks= np.array(peakutils.indexes(dat, thres=0.5, min_dist=2))
             hts = np.array(dat[peaks])
+            
+
             if(peaks.shape[0] > 0):
-                onsets[jj] = peaks[np.argmax(hts)]
+                # if peaks are small, it's electronic noise, so ignore
+                if np.max(hts) < 10:
+                    peaks = np.array([])
+                    onsets[jj] = 0
+                else:
+                    onsets[jj] = peaks[np.argmax(hts)]
                 #dat.plot()
                 #plt.scatter(x = peaks[np.argmax(hts['peak_heights'])], y = hts["peak_heights"][np.argmax(hts['peak_heights'])])
         #         calb.plot(y=['a', 'b', 'c', 'd', 'e'], style='-')
@@ -681,10 +688,11 @@ def calibrate(serial_con):
         columns = np.hstack([columns, ["time_S", "time"]])
 
         calb.columns = columns
-        calb.head()
+        #calb.head()
         # calb.plot(y=['top', 'mid', 'base'], style='-')
-
-        kmc = KMeans(n_clusters = 2)
+        
+        # add cluster for outliers
+        kmc = KMeans(n_clusters = 3)
 #         ctr2 = 0
 #         colors = ["red", 'blue']
         decBounds = {"base": "", "mid": "", 
@@ -692,9 +700,23 @@ def calibrate(serial_con):
                     "colNames": "", 
                     "port": serial_con.port}
         for location in ["base", "mid"]:
-            classes = kmc.fit_predict(np.array(calb[location]).reshape(-1, 1))
-            decBound = np.abs((np.median(np.array(calb[location])[classes == 1]) + 
-                              np.median(np.array(calb[location])[classes == 0])) / 2).astype(int)
+            classData = calb[location].copy()
+            
+            # refref: inefficient -- calculating rolling mean again
+            dat = classData.rolling(window=3, min_periods = 1, center = True).var()
+            
+            # label outliers as -99
+            classData.loc[dat > 0.1*np.max(dat)] = -99
+            
+            classes = kmc.fit_predict(np.array(classData).reshape(-1, 1))
+            # remove outlier classes
+            classMeds = np.array([np.median(classData[classes == cc]) for cc in np.unique(classes)])
+            classesNoOutlier = np.unique(classes)[np.unique(classes) != np.unique(classes)[classMeds < 0][0]]
+            
+            # calculate decision boundaries
+            decBound = np.abs((np.median(np.array(classData)[classes == classesNoOutlier[0]]) + 
+                np.median(np.array(classData)[classes == classesNoOutlier[1]])) / 2).astype(int)
+            
             calb[location + "_classes"] = classes
             decBounds[location] = decBound
 #             plt.plot(calb[location][classes == 0], 'bo', label = "")
@@ -802,8 +824,8 @@ def multiReadAndSave(ser1, ser2, cal1, cal2,
                            "maxTime" : maxTime})
 
     # refref: will need to change timeout when I do full trials
-    dat1, dat1_file = q1.get(timeout=35)
-    dat2, dat2_file = q2.get(timeout=35)
+    dat1, dat1_file = q1.get(timeout=maxTime)
+    dat2, dat2_file = q2.get(timeout=maxTime)
 
     return(dat1, dat1_file, dat2, dat2_file)
 

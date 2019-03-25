@@ -76,7 +76,6 @@ def saveAviHelper2(conn, cam, cam2, fileFormat, fileName, fileName2, frameRate, 
             break
 
         # refref add image timestamp
-
         avi.append(image)
         avi2.append(image2)
         numImages += 1
