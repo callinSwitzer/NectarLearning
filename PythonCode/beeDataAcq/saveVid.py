@@ -62,7 +62,7 @@ def getCalibrationImages():
 ####################################################################          
         
         
-def reduceSize(dat, originalShape = [1024, 1280], proportion = 1/4):
+def reduceSize(dat, originalShape = [1024, 1280], proportion = 1/10):
     # reduce resolution by 4X to make it faster
 
     def downsample_to_proportion(rows, proportion=1):
@@ -86,11 +86,12 @@ def reduceSize(dat, originalShape = [1024, 1280], proportion = 1/4):
 ####################################################################       
         
         
-def beeInImage(calImg, frame):
+def beeInImage(calImg, frame, blurAmt = (5,5), areaThreshold= 5):
     '''
     Returns True if a bee is detected in the image
     
     Detects bees by size of dark blobs in the image
+    --if it doesn't work, try including light blobs.
     
     Parameters
     ----------
@@ -123,7 +124,8 @@ def beeInImage(calImg, frame):
 
     # gaussian blur
     # 121, 121 works for full sized image, 15,15 works for 4x smaller image
-    blur = cv2.GaussianBlur(imDiff_cropped,(15,15),0)
+    # 5,5 works for 1/10 size
+    blur = cv2.GaussianBlur(imDiff_cropped, blurAmt ,0)
     
     # get darker sections (positive threshold gives dark areas)
     ret_dark,th3_dark = cv2.threshold(blur,70,255,cv2.THRESH_BINARY)
@@ -133,10 +135,14 @@ def beeInImage(calImg, frame):
     mask = np.ones(th3_dark.shape[:2], dtype="uint8") * 0 # create a blank black mask
 
     areas = np.array([cv2.contourArea(c, False) for c in cnts])
-    print(areas)
+    
+    if len(areas) == 0:
+        areas = np.array([0])
+    else:
+        print(max(areas))
 
-    # if there is at least one area over XX, then it's a bee
-    return(any(areas > 100))
+    # if there is at least one area over areaThreshold, then it's a bee
+    return(any(areas > areaThreshold), max(areas))
 
 
 
@@ -171,14 +177,14 @@ def saveAviHelper2_process(conn, cam, camCal1, cam2, camCal2,
     
     
     numImages = 0
-    tmpDat = np.empty(3, dtype = '<U26')
+    tmpDat = np.empty(5, dtype = '<U26')
 
     avi = fc2.AVIRecorder()
     avi2 = fc2.AVIRecorder()
     
     # resize calibration images 4x
-    camCal1 = camCal1[::4,::4]
-    camCal2 = camCal2[::4,::4]
+    camCal1 = camCal1[::10,::10]
+    camCal2 = camCal2[::10,::10]
 
     for i in range(maxImgs):
         
@@ -190,19 +196,19 @@ def saveAviHelper2_process(conn, cam, camCal1, cam2, camCal2,
             dat1,dat2 = image.getData(), image2.getData()
             
             # make images smaller
-            frame1 = reduceSize(dat1, (image.getRows(), image.getCols()), proportion = 1/4)
-            frame2 = reduceSize(dat2, (image2.getRows(), image2.getCols()), proportion = 1/4)
+            frame1 = reduceSize(dat1, (image.getRows(), image.getCols()), proportion = 1/10)
+            frame2 = reduceSize(dat2, (image2.getRows(), image2.getCols()), proportion = 1/10)
             
 ## refref: here is where I could do some image processing with opencv
 ## refref: write to dataset -- timestamp, camera1BeeInFrame, camera2BeeInFrame
-            tmpDat[1] = beeInImage(camCal1, frame1)
-            tmpDat[2] = beeInImage(camCal2, frame2)
+            tmpDat[1], tmpDat[2] = beeInImage(camCal1, frame1)
+            tmpDat[3], tmpDat[4] = beeInImage(camCal2, frame2)
         
             # write to file      
             with open(csvFileName, 'a+', newline='') as myfile:
                 wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
                 if i == 0:
-                    wr.writerow(["datetime", "beeInImage1", "beeInImage2"]) #write header
+                    wr.writerow(["datetime", "beeInImage1", "darkArea1", "beeInImage2", "darkArea2"]) #write header
                 wr.writerow(tmpDat)
             
             
@@ -210,7 +216,7 @@ def saveAviHelper2_process(conn, cam, camCal1, cam2, camCal2,
             print("Error retrieving buffer : ", fc2Err)
             continue
 
-        print("Grabbed image {}".format(i))
+        #print("Grabbed image {}".format(i))
         
         # check connection, and break of something is received
         if conn.poll():
@@ -248,12 +254,12 @@ def saveAviHelper2_process(conn, cam, camCal1, cam2, camCal2,
             for jj in range(10):
                 cv2.destroyAllWindows()
             break
-
+            
         # refref add image timestamp
         avi.append(image)
         avi2.append(image2)
         numImages += 1
-        print("Appended image {}...".format(i))
+        #print("Appended image {}...".format(i))
 
     # close windows if loop ends
     for jj in range(10):
@@ -375,11 +381,11 @@ def main(conn, camCal1, camCal2, directory = "C:\\Users\\Combes4\\Desktop\\TempV
     conn.send(os.path.join(directory,   movieID))
 #     saveAviHelper2(conn, c,d, "AVI", fileName.encode("utf-8"), fileName2.encode("utf-8"), 10, maxImgs = 10000)
     saveAviHelper2_process(conn, c, camCal1, d, camCal2, 
-                           "AVI", fileName.encode("utf-8"), fileName2.encode("utf-8"), 
+                           "MJPG", fileName.encode("utf-8"), fileName2.encode("utf-8"), 
                            csvFileName,
                            10, maxImgs = 10000)
 
-
+# MJPG is slower than AVI
     
     
 if __name__ == "__main__":

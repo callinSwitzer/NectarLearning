@@ -243,7 +243,7 @@ def Reward(serial_con,
 
 def readAndSave(serial_con = None, maxTime = 600, wait_time = 0, 
                 returnVals = True, saveData = True, 
-                dataDir = "Need Path", timeout = 10, 
+                dataDir = "Need Path",
                reward = True, 
                calibrationInfo = "" ):
     
@@ -261,7 +261,6 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     returnVals (logical): True means return a data frame of values
     saveData (logical): True means save data (in dataDir)
     dataDir (diretory): folder where data are stored
-    timeout (int): number of seconds to continue recording, if there is no action
     reward (logical): should the bee be rewarded
     calibrationInfo (dict): calibration information (saved to first line of csv file)
     
@@ -272,6 +271,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
   
     """
 
+    timeout = int(maxTime - 1)
     startTime = time.time()
     tmp = np.empty((1, 8), dtype = '<U260')
     tmp[0, 6] = serial_con.port
@@ -364,7 +364,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                 minSinceLastVisit = 999
             
             
-        # break if there is no action for XX sec
+       # breaks 1 sec before maxtime
         elif(time.time() - timeOfLastVisit > timeout):
             print("No action for " + str(timeout) + " sec")
             break
@@ -756,9 +756,9 @@ def plotCalibration(calibName):
     '''
     calibName["calbData"].plot(y = ["top", "mid", "base"])
     plt.hlines(y = calibName["base_dec_bound"], xmin = 0, xmax = len(calibName["calbData"]), 
-               linestyle = "--", color = 'r', label = "base_dec_bound")
+               linestyle = "--", color = 'tab:green', label = "base_dec_bound")
     plt.hlines(y = calibName["mid_dec_bound"], xmin = 0, xmax = len(calibName["calbData"]), 
-               linestyle = "--", color = 'k', label = "mid_dec_bound")
+               linestyle = "--", color = 'tab:orange', label = "mid_dec_bound")
     plt.ylabel("sensor light reading")
     plt.xlabel("sample number")
     plt.legend(loc='center right', bbox_to_anchor=(1.4, 0.5), ncol=1, title=calibName['port'])
@@ -814,13 +814,11 @@ def multiReadAndSave(ser1, ser2, cal1, cal2,
                   kwargs={ "serial_con" : ser1, 
                            "calibrationInfo" : cal1 , 
                            "dataDir" : dataDir, 
-                           "timeout" : 100, 
                            "maxTime" : maxTime})
     q2 = enthread_read(target = readAndSave, 
                   kwargs={ "serial_con" : ser2, 
                            "calibrationInfo" : cal2 ,
                            "dataDir" : dataDir, 
-                           "timeout" : 100,
                            "maxTime" : maxTime})
 
     # refref: will need to change timeout when I do full trials
