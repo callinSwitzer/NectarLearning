@@ -101,7 +101,10 @@ def Reward(serial_con,
     Returns: 
         None
     """
-
+    
+    while msvcrt.kbhit():
+        msvcrt.getch()
+        print('clearing characters ...')
 
     if nectarState != "low":
         print('Nectar is not in the correct position')
@@ -279,6 +282,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     timeOfLastVisit = time.time()
     minSinceLastVisit = 999
     ctr = 0
+    resetting = False
 
     
     minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
@@ -311,6 +315,9 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         txt = serial_con.readline().decode("utf-8")
         tmp[0, 0:5] = [int(i) for i in txt.split(',')]
         tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        s = tmp[0, 5]
+        s = re.sub(r'[^\w\s]','_',s)
+        s = re.sub(" ", "__", s)[0:] + ".csv"
         minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
         
         # if baseline gets too high (i.e. nectar is going down), reset it
@@ -321,16 +328,16 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                    baseSensorThreshold = baseSensorThreshold, 
                       baseSensorPosition = baseSensorPosition)
             tmp[0, -1:] = "auto-reset nectar position"
+            resetting = True
+            
             
         
         time.sleep(wait_time)
         
+        # refref: can cause a problem if the nectar resets on ctr == 0
+        
         if saveData:
-            if ctr == 0:
-                s = tmp[0, 5]
-                s = re.sub(r'[^\w\s]','_',s)
-                s = re.sub(" ", "__", s)[0:] + ".csv"
-                
+            if (ctr == 0):
                 # add colnames
                 with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
                     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
@@ -367,6 +374,10 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
        # breaks 1 sec before maxtime
         elif(time.time() - timeOfLastVisit > timeout):
             print("No action for " + str(timeout) + " sec")
+            break
+            
+        elif((time.time() - startTime) > (maxTime - 5)):
+            print("Timeout at ", time.time() - startTime)
             break
         
         # update top sensor last data
@@ -438,6 +449,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                       baseSensorPosition = baseSensorPosition)
             # reset note column
             tmp[0, 7] = ""
+            resetting = False
         #print(minSinceLastVisit)
         ctr += 1
     # read in data, if returnVals is True
