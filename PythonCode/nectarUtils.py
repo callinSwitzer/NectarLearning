@@ -101,7 +101,10 @@ def Reward(serial_con,
     Returns: 
         None
     """
-
+    
+    while msvcrt.kbhit():
+        msvcrt.getch()
+        print('clearing characters ...')
 
     if nectarState != "low":
         print('Nectar is not in the correct position')
@@ -243,7 +246,7 @@ def Reward(serial_con,
 
 def readAndSave(serial_con = None, maxTime = 600, wait_time = 0, 
                 returnVals = True, saveData = True, 
-                dataDir = "Need Path", timeout = 10, 
+                dataDir = "Need Path",
                reward = True, 
                calibrationInfo = "" ):
     
@@ -261,7 +264,6 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     returnVals (logical): True means return a data frame of values
     saveData (logical): True means save data (in dataDir)
     dataDir (diretory): folder where data are stored
-    timeout (int): number of seconds to continue recording, if there is no action
     reward (logical): should the bee be rewarded
     calibrationInfo (dict): calibration information (saved to first line of csv file)
     
@@ -272,6 +274,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
   
     """
 
+    timeout = int(maxTime - 1)
     startTime = time.time()
     tmp = np.empty((1, 8), dtype = '<U260')
     tmp[0, 6] = serial_con.port
@@ -279,6 +282,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     timeOfLastVisit = time.time()
     minSinceLastVisit = 999
     ctr = 0
+    resetting = False
 
     
     minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
@@ -311,6 +315,9 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         txt = serial_con.readline().decode("utf-8")
         tmp[0, 0:5] = [int(i) for i in txt.split(',')]
         tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        s = tmp[0, 5]
+        s = re.sub(r'[^\w\s]','_',s)
+        s = re.sub(" ", "__", s)[0:] + ".csv"
         minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
         
         # if baseline gets too high (i.e. nectar is going down), reset it
@@ -321,16 +328,16 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                    baseSensorThreshold = baseSensorThreshold, 
                       baseSensorPosition = baseSensorPosition)
             tmp[0, -1:] = "auto-reset nectar position"
+            resetting = True
+            
             
         
         time.sleep(wait_time)
         
+        # refref: can cause a problem if the nectar resets on ctr == 0
+        
         if saveData:
-            if ctr == 0:
-                s = tmp[0, 5]
-                s = re.sub(r'[^\w\s]','_',s)
-                s = re.sub(" ", "__", s)[0:] + ".csv"
-                
+            if (ctr == 0):
                 # add colnames
                 with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
                     wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
@@ -364,9 +371,13 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                 minSinceLastVisit = 999
             
             
-        # break if there is no action for XX sec
+       # breaks 1 sec before maxtime
         elif(time.time() - timeOfLastVisit > timeout):
             print("No action for " + str(timeout) + " sec")
+            break
+            
+        elif((time.time() - startTime) > (maxTime - 5)):
+            print("Timeout at ", time.time() - startTime)
             break
         
         # update top sensor last data
@@ -438,6 +449,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                       baseSensorPosition = baseSensorPosition)
             # reset note column
             tmp[0, 7] = ""
+            resetting = False
         #print(minSinceLastVisit)
         ctr += 1
     # read in data, if returnVals is True
@@ -756,9 +768,9 @@ def plotCalibration(calibName):
     '''
     calibName["calbData"].plot(y = ["top", "mid", "base"])
     plt.hlines(y = calibName["base_dec_bound"], xmin = 0, xmax = len(calibName["calbData"]), 
-               linestyle = "--", color = 'r', label = "base_dec_bound")
+               linestyle = "--", color = 'tab:green', label = "base_dec_bound")
     plt.hlines(y = calibName["mid_dec_bound"], xmin = 0, xmax = len(calibName["calbData"]), 
-               linestyle = "--", color = 'k', label = "mid_dec_bound")
+               linestyle = "--", color = 'tab:orange', label = "mid_dec_bound")
     plt.ylabel("sensor light reading")
     plt.xlabel("sample number")
     plt.legend(loc='center right', bbox_to_anchor=(1.4, 0.5), ncol=1, title=calibName['port'])
@@ -814,13 +826,11 @@ def multiReadAndSave(ser1, ser2, cal1, cal2,
                   kwargs={ "serial_con" : ser1, 
                            "calibrationInfo" : cal1 , 
                            "dataDir" : dataDir, 
-                           "timeout" : 100, 
                            "maxTime" : maxTime})
     q2 = enthread_read(target = readAndSave, 
                   kwargs={ "serial_con" : ser2, 
                            "calibrationInfo" : cal2 ,
                            "dataDir" : dataDir, 
-                           "timeout" : 100,
                            "maxTime" : maxTime})
 
     # refref: will need to change timeout when I do full trials
