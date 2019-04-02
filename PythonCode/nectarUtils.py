@@ -315,9 +315,10 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         txt = serial_con.readline().decode("utf-8")
         tmp[0, 0:5] = [int(i) for i in txt.split(',')]
         tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-        s = tmp[0, 5]
-        s = re.sub(r'[^\w\s]','_',s)
-        s = re.sub(" ", "__", s)[0:] + ".csv"
+        if (ctr == 0):
+            s = tmp[0, 5]
+            s = re.sub(r'[^\w\s]','_',s)
+            s = re.sub(" ", "__", s)[0:] + ".csv"
         minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
         
         # if baseline gets too high (i.e. nectar is going down), reset it
