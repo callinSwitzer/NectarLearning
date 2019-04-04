@@ -248,7 +248,8 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                 returnVals = True, saveData = True, 
                 dataDir = "Need Path",
                reward = True, 
-               calibrationInfo = "" ):
+               calibrationInfo = "", 
+               flagPos = 0):
     
     """
     ## refref: could remove minReward thresh, 
@@ -266,15 +267,16 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     dataDir (diretory): folder where data are stored
     reward (logical): should the bee be rewarded
     calibrationInfo (dict): calibration information (saved to first line of csv file)
+    flagPos (int): 0 or 1 for ser1 or ser2
     
-
     
     Returns: 
     array: data from the most recent 10 readings 
   
     """
 
-    timeout = int(maxTime - 1)
+#     timeout = int(maxTime - 1)
+    timeout = 5*60 # five minute timeout
     startTime = time.time()
     tmp = np.empty((1, 8), dtype = '<U260')
     tmp[0, 6] = serial_con.port
@@ -283,7 +285,8 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     minSinceLastVisit = 999
     ctr = 0
     resetting = False
-
+    global flag
+    flag = [0, 0]
     
     minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
     colNames = calibrationInfo["colNames"] 
@@ -305,7 +308,12 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         msvcrt.getch()
         print('clearing characters ...')
     
-    while (time.time() - startTime) < maxTime: 
+    while ((time.time() - startTime) < maxTime): 
+        
+        if flag == [1,1]:
+            print("no action at either flower for ", timeout, " seconds")
+            winsound.PlaySound("*", winsound.SND_ALIAS)
+            break
         
         # print time
         if np.mod(ctr, 1000) == 0:
@@ -359,7 +367,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         
         # stop if there is no action for XX sec
         if (topSensorLastData - int(tmp[0, topSensorPosition]) < -2) and (ctr > 0):
-            print("ACTION")
+            print("ACTION ", serial_con.port)
             timeOfLastVisit = time.time()
             #  reward bee
             # refref: only reward bee if bee has pulled out of flower before last visit
@@ -370,16 +378,16 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                       baseSensorPosition = baseSensorPosition)
                 # reset min threshold to high
                 minSinceLastVisit = 999
-            
-            
-       # breaks 1 sec before maxtime
-        elif(time.time() - timeOfLastVisit > timeout):
-            print("No action for " + str(timeout) + " sec")
-            break
-            
+ 
         elif((time.time() - startTime) > (maxTime - 5)):
-            print("Timeout at ", time.time() - startTime)
+            print("Timeout at ", time.time() - startTime, " seconds")
             break
+
+        # if bee doesn't visit for timeout seconds
+        if((time.time() - timeOfLastVisit) > timeout):
+            flag[flagPos] = 1
+        else:
+            flag[flagPos] = 0
         
         # update top sensor last data
         serial_con.write("r".encode("utf-8"))
@@ -458,165 +466,6 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         return(pd.read_csv(os.path.join(dataDir, s)), s)
     
 
-    
-    
-    
-##############################################################    
-# save every sample, keep last XX in memory
-##############################################################
-
-def readOnly(serial_con, maxTime = 5, wait_time = 0, 
-                returnVals = True, saveData = True, 
-                dataDir = "Need Path", timeout = 10, 
-            colNames = ""):
-    
-    """
-    Reads data from Arduino, saves each line to a file
-  
-    Parameters: 
-    maxTime (int): Max number of seconds the function run
-    wait_time (float): number of seconds between readings
-    returnVals (logical): True means return a data frame of values
-    saveData (logical): True means save data (in dataDir)
-    dataDir (diretory): folder where data are stored
-    timeout (int): number of seconds to continue recording, if there is no action
-    colNames (array): names of columns to be saved in file
-    
-    Returns: 
-    array: data from the most recent 10 readings 
-  
-    """
-
-    startTime = time.time()
-    tmp = np.empty((1, 8), dtype = '<U26')
-    tmp[0, 7] = serial_con.port
-    topSensorLastData = 999
-    timeOfLastVisit = time.time()
-    minSinceLastVisit = 999
-    ctr = 0
-    
-    # refref: update this
-    if serial_con.port == "COM8":
-        topSensorPosition = 1
-    
-    
-    while msvcrt.kbhit():
-        msvcrt.getch()
-        print('clearing characters ...')
-    
-    while (time.time() - startTime) < maxTime:    
-        serial_con.write("r".encode("utf-8"))
-        txt = serial_con.readline().decode("utf-8")
-        tmp[0, 0:5] = [int(i) for i in txt.split(',')]
-        tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-        minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
-        
-        time.sleep(wait_time)
-        
-        if saveData:
-            if ctr == 0:
-                s = tmp[0, 5]
-                s = re.sub(r'[^\w\s]','_',s)
-                s = re.sub(" ", "__", s)[0:] + ".csv"
-                
-                # refref update here
-                with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
-                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                    wr.writerows(np.hstack([colNames[0:3], 
-                                            ["limit_1", "limit_2", "timestamp", "notes", "port"]]).astype('<U26'))   
-                        
-                    
-            with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                wr.writerows(tmp)
-        
-        # stop if there is no action for XX sec
-        if (topSensorLastData - int(tmp[0, topSensorPosition]) < -2) and (ctr > 0):
-            print("ACTION")
-            timeOfLastVisit = time.time()
-            
-            
-        # break if there is no action for XX sec
-        elif(time.time() - timeOfLastVisit > timeout):
-            print("No action for " + str(timeout) + " sec")
-            break
-        
-        # update top sensor last data
-        serial_con.write("r".encode("utf-8"))
-        txt = serial_con.readline().decode("utf-8")
-        tmp[0, 0:5] = [int(i) for i in txt.split(',')]
-        minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
-        topSensorLastData = int(tmp[0, topSensorPosition])
-        
-        if msvcrt.kbhit(): # if q, or escape is pressed, then break
-            k = msvcrt.getch()
-            if(k == b'q') | (k == b'\x1b') | (k == b'\x0b') :
-                print("keyboard break")
-                winsound.MessageBeep()
-                break
-                
-            # allow researcher to move nectar manually
-            elif (k == b'b'):
-                serial_con.write("bb".encode("utf-8"))
-                serial_con.write("r".encode("utf-8"))
-                txt = serial_con.readline().decode("utf-8")
-                #print(txt)
-                tmp[0, 0:5] = [int(i) for i in txt.split(',')]
-                tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 7] = "manual b"
-                minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
-            
-                # append to file
-                if saveData:
-                    if serial_con.port == "COM8":
-                        with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                            wr.writerows(tmp)
-                            
-            elif (k == b'f'):
-                serial_con.write("ff".encode("utf-8"))
-                serial_con.write("r".encode("utf-8"))
-                txt = serial_con.readline().decode("utf-8")
-                #print(txt)
-                tmp[0, 0:5] = [int(i) for i in txt.split(',')]
-                tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 7] = "manual f"
-                minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
-            
-                # append to file
-                if saveData:
-                    if serial_con.port == "COM8":
-                        with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                            wr.writerows(tmp)
-                
-            elif (k == b'r'):
-                
-                serial_con.write("r".encode("utf-8"))
-                txt = serial_con.readline().decode("utf-8")
-                #print(txt)
-                tmp[0, 0:5] = [int(i) for i in txt.split(',')]
-                tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
-                tmp[0, 7] = "manual reward"
-                minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
-            
-                # append to file
-                if saveData:
-                    if serial_con.port == "COM8":
-                        with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                            wr.writerows(tmp)
-                
-                #  manually reward bee
-                Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
-                       saveData = saveData, saveFileName = s)
-            # reset note column
-            tmp[0, 7] = ""
-        #print(minSinceLastVisit)
-        ctr += 1
-    # read in data, if returnVals is True
-    if returnVals and saveData: 
-        return(pd.read_csv(os.path.join(dataDir, s)))
     
     
 ######################################################################
@@ -827,12 +676,14 @@ def multiReadAndSave(ser1, ser2, cal1, cal2,
                   kwargs={ "serial_con" : ser1, 
                            "calibrationInfo" : cal1 , 
                            "dataDir" : dataDir, 
-                           "maxTime" : maxTime})
+                           "maxTime" : maxTime, 
+                           "flagPos" : 0})
     q2 = enthread_read(target = readAndSave, 
                   kwargs={ "serial_con" : ser2, 
                            "calibrationInfo" : cal2 ,
                            "dataDir" : dataDir, 
-                           "maxTime" : maxTime})
+                           "maxTime" : maxTime, 
+                           "flagPos" : 1})
 
     # refref: will need to change timeout when I do full trials
     dat1, dat1_file = q1.get(timeout=maxTime)
