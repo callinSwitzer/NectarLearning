@@ -672,6 +672,8 @@ def enthread_read(target, kwargs):
 def multiReadAndSave(ser1, ser2, cal1, cal2,
                      dataDir = "dataDir", maxTime = 15):
 
+    # refref: may call different functions, depending on treatment
+    # call this function "ShamReadAndSave"
     q1 = enthread_read(target = readAndSave, 
                   kwargs={ "serial_con" : ser1, 
                            "calibrationInfo" : cal1 , 
