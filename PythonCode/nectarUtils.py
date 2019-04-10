@@ -78,7 +78,10 @@ def Reward(serial_con,
            backAmt = 20,
            saveData = False, 
            baseSensorThreshold = 300, 
-          baseSensorPosition = 2):
+          baseSensorPosition = 2, 
+          ignoreWarnings = False, 
+          resetSteps = 50,
+          rewardType = ""):
     """
     Moves nectar up the tube, so that it is accessible by the bees.
     
@@ -97,7 +100,10 @@ def Reward(serial_con,
         saveData (logical): True means the data should be saved
         baseSensorThreshold (int): threshold where nectar is "seen" by base sensor
         baseSensorPosition (int): the column of the data the is the base sensor
-
+        ignoreWarnings (bool): True means warnings won't be printed
+        resetSteps (int): max number of forward steps taken to reset nectar at correct level
+        rewardType (str): either "" or "sham"
+    
     Returns: 
         None
     """
@@ -124,7 +130,7 @@ def Reward(serial_con,
             tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
             
             if ii == 0:
-                tmp[0, 7] = "reward Triggered"
+                tmp[0, 7] = rewardType + "reward Triggered"
             else:
                 tmp[0,7] = ""
                 
@@ -167,7 +173,7 @@ def Reward(serial_con,
         # return nectar to bottom position
         # move at least as far as it went up, and then slowly move forward until the lowest
         # photogate changes
-        for jj in range(numSteps+ backAmt):
+        for jj in range(numSteps + backAmt):
             
             # break by keyboard option
             if msvcrt.kbhit(): # if q, or escape is pressed, then break
@@ -201,7 +207,7 @@ def Reward(serial_con,
         
         # move back forward until the base sensor is seeing the liquid
 
-        for ii in range(50):
+        for ii in range(resetSteps):
             
             serial_con.write("r".encode("utf-8"))
             txt = serial_con.readline().decode("utf-8")
@@ -232,7 +238,8 @@ def Reward(serial_con,
             
         # warning if nectar never reaches the bottom sensor
         if int(tmp[0, baseSensorPosition]) > baseSensorThreshold:
-            warnings.warn("Check Nectar -- it may be too low!!")
+            if ignoreWarnings == False:
+                warnings.warn("Check Nectar -- it may be too low!!")
 
 
             
@@ -251,12 +258,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                calibrationInfo = "", 
                flagPos = 0):
     
-    """
-    ## refref: could remove minReward thresh, 
-    colnames, 
-    baseSensorThreshold
-    and just keep calibration
-    
+    """   
     Reads data from Arduino, saves each line to a file
   
     Parameters: 
@@ -288,6 +290,10 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     global flag
     flag = [0, 0]
     
+    global rewardCounter
+    rewardCounter = [0,0]
+    maxRewards = 3
+    
     minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
     colNames = calibrationInfo["colNames"] 
     baseSensorThreshold = calibrationInfo['base_dec_bound']
@@ -312,6 +318,11 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         
         if flag == [1,1]:
             print("no action at either flower for ", timeout, " seconds")
+            winsound.PlaySound("*", winsound.SND_ALIAS)
+            break
+        
+        if sum(rewardCounter) >= maxRewards:
+            print("bee reached " + str(maxRewards) + " rewards")
             winsound.PlaySound("*", winsound.SND_ALIAS)
             break
         
@@ -367,15 +378,19 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         
         # stop if there is no action for XX sec
         if (topSensorLastData - int(tmp[0, topSensorPosition]) < -2) and (ctr > 0):
-            print("ACTION ", serial_con.port)
+            
             timeOfLastVisit = time.time()
             #  reward bee
             # refref: only reward bee if bee has pulled out of flower before last visit
             if minSinceLastVisit < minRewardThreshold:
+                # add one to reward counter
+                rewardCounter[flagPos] += 1
+                print("ACTION ", rewardCounter, serial_con.port)
                 
                 Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
                        saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
                       baseSensorPosition = baseSensorPosition)
+               
                 # reset min threshold to high
                 minSinceLastVisit = 999
  
@@ -466,6 +481,243 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
         return(pd.read_csv(os.path.join(dataDir, s)), s)
     
 
+    
+######################################################################   
+## SHAM Read and Save
+######################################################################
+    
+    
+def shamReadAndSave(serial_con = None, maxTime = 600, wait_time = 0, 
+                returnVals = True, saveData = True, 
+                dataDir = "Need Path",
+               reward = True, 
+               calibrationInfo = "", 
+               flagPos = 0):
+    
+    """
+    Reads data from Arduino, saves each line to a file. Does not reward bee.
+  
+    Parameters: 
+    maxTime (int): Max number of seconds the function run
+    wait_time (float): number of seconds between readings
+    returnVals (logical): True means return a data frame of values
+    saveData (logical): True means save data (in dataDir)
+    dataDir (diretory): folder where data are stored
+    reward (logical): should the bee be rewarded
+    calibrationInfo (dict): calibration information (saved to first line of csv file)
+    flagPos (int): 0 or 1 for ser1 or ser2
+    
+    
+    Returns: 
+    array: data from the most recent 10 readings 
+  
+    """
+
+#     timeout = int(maxTime - 1)
+    timeout = 5*60 # five minute timeout
+    startTime = time.time()
+    tmp = np.empty((1, 8), dtype = '<U260')
+    tmp[0, 6] = serial_con.port
+    topSensorLastData = 999
+    timeOfLastVisit = time.time()
+    minSinceLastVisit = 999
+    ctr = 0
+    resetting = False
+    global flag
+    flag = [0, 0]
+    
+    global rewardCounter
+    rewardCounter = [0,0]
+    maxRewards = 3
+    
+    minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
+    colNames = calibrationInfo["colNames"] 
+    baseSensorThreshold = calibrationInfo['base_dec_bound']
+    topSensorPosition = np.where(colNames == "top")[0][0]
+    baseSensorPosition = np.where(colNames == "base")[0][0]
+    
+    # initialize nectar to correct level
+    Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
+                   saveData = False, saveFileName = "tmp", backAmt = 30, 
+          baseSensorThreshold = baseSensorThreshold, 
+          baseSensorPosition = baseSensorPosition, ignoreWarnings = True,
+          resetSteps = 0, rewardType = "sham ")
+    
+
+
+       
+    
+    while msvcrt.kbhit():
+        msvcrt.getch()
+        print('clearing characters ...')
+    
+    while ((time.time() - startTime) < maxTime): 
+        
+        if flag == [1,1]:
+            print("no action at either flower for ", timeout, " seconds")
+            winsound.PlaySound("*", winsound.SND_ALIAS)
+            break
+            
+        if sum(rewardCounter) >= maxRewards:
+            print("bee reached " + str(maxRewards) + " rewards")
+            winsound.PlaySound("*", winsound.SND_ALIAS)
+            break
+        
+        # print time
+        if np.mod(ctr, 1000) == 0:
+            print(np.round(time.time() - startTime), "seconds elapsed")
+        
+        serial_con.write("r".encode("utf-8"))
+        txt = serial_con.readline().decode("utf-8")
+        tmp[0, 0:5] = [int(i) for i in txt.split(',')]
+        tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        if (ctr == 0):
+            s = tmp[0, 5]
+            s = re.sub(r'[^\w\s]','_',s)
+            s = re.sub(" ", "__", s)[0:] + ".csv"
+        minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
+        
+#         # if baseline gets too high (i.e. nectar is going down), reset it
+#         if int(tmp[0, baseSensorPosition]) > calibrationInfo['base_dec_bound']:
+#             print("Nectar is drifting -- resetting")
+#             Reward(serial_con, numSteps=0, rewardSeconds=0, dataDir = dataDir,
+#                        saveData = saveData, saveFileName = s,  backAmt = 30,
+#                    baseSensorThreshold = baseSensorThreshold, 
+#                       baseSensorPosition = baseSensorPosition)
+#             tmp[0, -1:] = "auto-reset nectar position"
+#             resetting = True
+            
+            
+        
+        time.sleep(wait_time)
+        
+        # refref: can cause a problem if the nectar resets on ctr == 0
+        
+        if saveData:
+            if (ctr == 0):
+                # add colnames
+                with open(os.path.join(dataDir, s), 'w+', newline='') as myfile:
+                    wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                    wr.writerows([np.hstack([colNames[0:3], 
+                                            ["limit_1", "limit_2", "timestamp", "port", "notes"]]).astype('<U26')])       
+                        
+                    
+            with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                if ctr == 0:
+                    calCopy = calibrationInfo.copy() 
+                    calCopy.pop("calbData") # remove the calbData key from the dict
+                    tmp[0, -1:] = str(calCopy)
+                wr.writerows(tmp)
+        
+        # reset notes
+        tmp[0, -1:] = ""
+        
+        # stop if there is no action for XX sec
+        if (topSensorLastData - int(tmp[0, topSensorPosition]) < -2) and (ctr > 0):
+
+            timeOfLastVisit = time.time()
+            #  reward bee
+            # refref: only reward bee if bee has pulled out of flower before last visit
+            if minSinceLastVisit < minRewardThreshold:
+                # add one to reward counter
+                rewardCounter[flagPos] += 1
+                print("ACTION ", rewardCounter, serial_con.port)
+                
+                Reward(serial_con, numSteps=16, rewardSeconds=2.0, dataDir = dataDir,
+                       saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
+                      baseSensorPosition = baseSensorPosition, ignoreWarnings = True, backAmt = 30,
+                      resetSteps = 15, rewardType = "sham " )
+                
+                # reset min threshold to high
+                minSinceLastVisit = 999
+ 
+        elif((time.time() - startTime) > (maxTime - 5)):
+            print("Timeout at ", time.time() - startTime, " seconds")
+            break
+
+        # if bee doesn't visit for timeout seconds
+        if((time.time() - timeOfLastVisit) > timeout):
+            flag[flagPos] = 1
+        else:
+            flag[flagPos] = 0
+        
+        # update top sensor last data
+        serial_con.write("r".encode("utf-8"))
+        txt = serial_con.readline().decode("utf-8")
+        tmp[0, 0:5] = [int(i) for i in txt.split(',')]
+        minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
+        topSensorLastData = int(tmp[0, topSensorPosition])
+        
+        if msvcrt.kbhit(): # if q, or escape is pressed, then break
+            k = msvcrt.getch()
+            if(k == b'q') | (k == b'\x1b') | (k == b'\x0b') :
+                print("keyboard break")
+                winsound.MessageBeep()
+                break
+                
+            # allow researcher to move nectar manually
+            elif (k == b'b'):
+                serial_con.write("bb".encode("utf-8"))
+                serial_con.write("r".encode("utf-8"))
+                txt = serial_con.readline().decode("utf-8")
+                #print(txt)
+                tmp[0, 0:5] = [int(i) for i in txt.split(',')]
+                tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+                tmp[0, 7] = "manual b"
+                minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
+            
+                # append to file
+                if saveData:
+                    with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr.writerows(tmp)
+                            
+            elif (k == b'f'):
+                serial_con.write("ff".encode("utf-8"))
+                serial_con.write("r".encode("utf-8"))
+                txt = serial_con.readline().decode("utf-8")
+                #print(txt)
+                tmp[0, 0:5] = [int(i) for i in txt.split(',')]
+                tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+                tmp[0, 7] = "manual f"
+                minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
+            
+                # append to file
+                if saveData:
+                    with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr.writerows(tmp)
+                
+            elif (k == b'r'):
+                
+                serial_con.write("r".encode("utf-8"))
+                txt = serial_con.readline().decode("utf-8")
+                #print(txt)
+                tmp[0, 0:5] = [int(i) for i in txt.split(',')]
+                tmp[0, 5] = (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+                tmp[0, 7] = "manual reward"
+                minSinceLastVisit = np.min([int(tmp[0, topSensorPosition]), minSinceLastVisit])
+            
+                # append to file
+                if saveData:
+                    with open(os.path.join(dataDir, s), 'a+', newline='') as myfile:
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr.writerows(tmp)
+                
+                #  manually reward bee
+                Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
+                       saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
+                      baseSensorPosition = baseSensorPosition)
+            # reset note column
+            tmp[0, 7] = ""
+            resetting = False
+        #print(minSinceLastVisit)
+        ctr += 1
+    # read in data, if returnVals is True
+    if returnVals and saveData: 
+        return(pd.read_csv(os.path.join(dataDir, s)), s)
+    
     
     
 ######################################################################
@@ -670,24 +922,27 @@ def enthread_read(target, kwargs):
     return(q)
 
 def multiReadAndSave(ser1, ser2, cal1, cal2,
-                     dataDir = "dataDir", maxTime = 15):
+                     dataDir = "dataDir", maxTime = 15, 
+                    ser1Treatment = "reward", 
+                    ser2Treatment = "sham"):
 
-    # refref: may call different functions, depending on treatment
-    # call this function "ShamReadAndSave"
-    q1 = enthread_read(target = readAndSave, 
+    q1Target = readAndSave if ser1Treatment == "reward" else shamReadAndSave
+    q2Target = readAndSave if ser2Treatment == "reward" else shamReadAndSave
+    
+    
+    q1 = enthread_read(target = q1Target, 
                   kwargs={ "serial_con" : ser1, 
                            "calibrationInfo" : cal1 , 
                            "dataDir" : dataDir, 
                            "maxTime" : maxTime, 
                            "flagPos" : 0})
-    q2 = enthread_read(target = readAndSave, 
+    q2 = enthread_read(target = q2Target, 
                   kwargs={ "serial_con" : ser2, 
                            "calibrationInfo" : cal2 ,
                            "dataDir" : dataDir, 
                            "maxTime" : maxTime, 
                            "flagPos" : 1})
-
-    # refref: will need to change timeout when I do full trials
+    
     dat1, dat1_file = q1.get(timeout=maxTime)
     dat2, dat2_file = q2.get(timeout=maxTime)
 
