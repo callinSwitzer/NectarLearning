@@ -3,7 +3,7 @@ channels:
   #- conda-forge
   - defaults
 dependencies:
-  - python=3.6
+  - python=3.5
   - matplotlib=3.0
   - seaborn=0.9
   - numpy=1.15
