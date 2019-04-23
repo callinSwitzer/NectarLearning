@@ -7,7 +7,7 @@ dependencies:
   - matplotlib=3.0
   - seaborn=0.9
   - numpy=1.15
-  - pandas=0.24
+  - pandas=0.23
   - pip=19.0
   - scipy=1.2
   - scikit-learn=0.20
@@ -15,5 +15,5 @@ dependencies:
   - pyserial=3.4 # for connecting with arduino
   - conda-forge::peakutils
   - menpo::opencv=3.4
-  - conda-forge::scikit-image=0.15
+  - conda-forge::scikit-image=0.14
   # also need Pyflycap2 -- install in the Anaconda/envs/<envName>/Lib/ folder
