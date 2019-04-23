@@ -11,7 +11,7 @@ dependencies:
   - pip=19.0
   - scipy=1.2
   - scikit-learn=0.20
-  - ipykernel=5.1 # after install, activate environment and type python -m ipykernel install --user --name NectarLearning
+  - ipykernel=4.10 # after install, activate environment and type python -m ipykernel install --user --name NectarLearning
   - pyserial=3.4 # for connecting with arduino
   - conda-forge::peakutils
   - menpo::opencv=3.4
