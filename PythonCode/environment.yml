@@ -15,5 +15,5 @@ dependencies:
   - pyserial=3.4 # for connecting with arduino
   - conda-forge::peakutils
   - menpo::opencv=3.4
-  - conda-forge::scikit-image
-  # also need pyflycap
+  - conda-forge::scikit-image=0.15
+  # also need Pyflycap2 -- install in the Anaconda/envs/<envName>/Lib/ folder
