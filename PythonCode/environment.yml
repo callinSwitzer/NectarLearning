@@ -1,19 +1,19 @@
-name: NectarLearning
+name: NectarLearning2
 channels:
-  #- conda-forge
+  - conda-forge
   - defaults
 dependencies:
   - python=3.5
   - matplotlib=3.0
   - seaborn=0.9
-  - numpy=1.15
+  - numpy=1.16
   - pandas=0.23
   - pip=19.0
-  - scipy=1.2
+  - scipy=1.1
   - scikit-learn=0.20
-  - ipykernel=4.10 # after install, activate environment and type python -m ipykernel install --user --name NectarLearning
-  - pyserial=3.4 # for connecting with arduino
-  - conda-forge::peakutils
+  - ipykernel=4.10 
+  - pyserial=3.4 
+  - conda-forge::peakutils=1.3
   - menpo::opencv=3.4
   - conda-forge::scikit-image=0.14
-  # also need Pyflycap2 -- install in the Anaconda/envs/<envName>/Lib/ folder
+  # also need spinnaker-python with python -m pip install spinnaker_python-1.x.x.x-cp36-cp36m-win_amd64.whl
