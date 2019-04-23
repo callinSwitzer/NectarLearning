@@ -14,4 +14,5 @@ dependencies:
   - ipykernel=5.1 # after install, activate environment and type python -m ipykernel install --user --name NectarLearning
   - pyserial=3.4 # for connecting with arduino
   - conda-forge::peakutils
+  - menpo::opencv=3.4
   # also need pyflycap
