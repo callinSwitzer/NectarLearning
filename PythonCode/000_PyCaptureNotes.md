@@ -69,6 +69,8 @@ Intel MKL FATAL ERROR: Cannot load mkl_intel_thread.dll.
 If I use ```python -m pip install --upgrade numpy cython```, then it works.
 I basically use pip to install all packages that affected numpy, mkl, or cython. I created an environment that has inconsistencies by using ```conda install <package> --no-dep``` so that conda wouldn't fix the version of numpy I was using. 
 
+I also installed an older version of opencv that worked with my code: ```pip install opencv-python==3.4.0.12```
+
 
 
 
