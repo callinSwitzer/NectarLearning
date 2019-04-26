@@ -82,4 +82,6 @@ I added this path by:
 ```added C:\Anaconda3\envs\NectarCamera\Scripts```
 ```completed operation for: C:\Anaconda3\envs\NectarCamera\Scripts```
 
+Note that I also did ```conda-develop``` in the base environment, so I don't always have to activate the other environment before running jupyter lab.
+
 This addes a file called "conda.pth" to "site-packages" directory. And now in jupyter lab, when I run ```sys.path```, I see  ```C:\\Anaconda3\\envs\\NectarCamera\\Scripts```
