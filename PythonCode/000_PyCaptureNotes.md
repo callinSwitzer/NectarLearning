@@ -67,6 +67,7 @@ The ordinal 242 could not be located in the dynamic link library C:\Users\userna
 Intel MKL FATAL ERROR: Cannot load mkl_intel_thread.dll. 
 ```
 If I use ```python -m pip install --upgrade numpy cython```, then it works.
+I basically use pip to install all packages that affected numpy, mkl, or cython. I created an environment that has inconsistencies by using ```conda install <package> --no-dep``` so that conda wouldn't fix the version of numpy I was using. 
 
 
 
