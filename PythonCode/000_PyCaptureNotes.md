@@ -58,6 +58,18 @@ Point Grey Responded very promptly:
 >Please make sure to uninstall the PyCapture 2.13, delete all the files under "C:\Users\xxx\AppData\Local\Temp" if possible, then restart your computer and reinstall PyCapture2.12. This step is necessary as your system might still "remember" the old path in cache and will give the same error even after you roll back to PyCapture2.12.
 
 
+* ### Problem: PyCapture2 only seems to work with pip packages
+When I install conda packages, and PyCapture2, I get an error
+```
+The ordinal 242 could not be located in the dynamic link library C:\Users\username\Anaconda3\Library\bin\mkl_intel_thread.dll.
+
+Intel MKL FATAL ERROR: Cannot load mkl_intel_thread.dll. 
+```
+If I use ```python -m pip install --upgrade numpy cython```, then it works.
+
+
+
+
 * ### Problem: I can import PyCapture2 in ipython, but not in jupyter lab:
 Solutions: 
 Adding conda.pth to "site-packages" directory
