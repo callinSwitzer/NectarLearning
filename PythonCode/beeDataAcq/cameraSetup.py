@@ -63,7 +63,7 @@ def livePreview2(conn, c, d):
         print('clearing characters ...')
     
     cv2.namedWindow('image',cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('image', 1000,800)
+    cv2.resizeWindow('image', 1280,500)
 
     while(True):
         stt = time.time()

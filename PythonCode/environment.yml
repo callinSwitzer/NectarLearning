@@ -1,19 +1,21 @@
-name: NectarLearning2
+name: NectarCam2
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.5
-  - matplotlib=3.0
-  - seaborn=0.9
-  - numpy=1.16
-  - pandas=0.23
-  - pip=19.0
-  - scipy=1.1
-  - scikit-learn=0.20
-  - ipykernel=4.10 
-  - pyserial=3.4 
-  - conda-forge::peakutils=1.3
-  - menpo::opencv
-  - conda-forge::scikit-image=0.14
+  - python=3.6
+  - matplotlib
+  - seaborn
+  - numpy
+  - pandas
+  - pip
+  - scipy
+  - scikit-learn
+  - ipykernel 
+  - pyserial 
+  - peakutils
+  - scikit-image
+  - opencv
+ #  - opencv # after installing env, install open cv with conda install -c menpo opencv
+
   # also need spinnaker-python with python -m pip install spinnaker_python-1.x.x.x-cp36-cp36m-win_amd64.whl

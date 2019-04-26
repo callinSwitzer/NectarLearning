@@ -292,7 +292,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     
     global rewardCounter
     rewardCounter = [0,0]
-    maxRewards = 3
+    maxRewards = 100
     
     minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
     colNames = calibrationInfo["colNames"] 
@@ -528,7 +528,7 @@ def shamReadAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     
     global rewardCounter
     rewardCounter = [0,0]
-    maxRewards = 3
+    maxRewards = 100
     
     minRewardThreshold = int(1.10*calibrationInfo["topBaseline"]) 
     colNames = calibrationInfo["colNames"] 
@@ -923,11 +923,11 @@ def enthread_read(target, kwargs):
 
 def multiReadAndSave(ser1, ser2, cal1, cal2,
                      dataDir = "dataDir", maxTime = 15, 
-                    ser1Treatment = "reward", 
-                    ser2Treatment = "sham"):
+                    serCOM3Treatment = "reward", 
+                    serCOM4Treatment = "sham"):
 
-    q1Target = readAndSave if ser1Treatment == "reward" else shamReadAndSave
-    q2Target = readAndSave if ser2Treatment == "reward" else shamReadAndSave
+    q1Target = readAndSave if serCOM3Treatment == "reward" else shamReadAndSave
+    q2Target = readAndSave if serCOM4Treatment == "reward" else shamReadAndSave
     
     
     q1 = enthread_read(target = q1Target, 
