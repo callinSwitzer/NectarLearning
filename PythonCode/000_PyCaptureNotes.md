@@ -60,6 +60,7 @@ Point Grey Responded very promptly:
 
 * ### Problem: PyCapture2 only seems to work with pip packages
 When I install conda packages, and PyCapture2, I get an error
+
 ```
 The ordinal 242 could not be located in the dynamic link library C:\Users\username\Anaconda3\Library\bin\mkl_intel_thread.dll.
 
@@ -72,4 +73,12 @@ If I use ```python -m pip install --upgrade numpy cython```, then it works.
 
 * ### Problem: I can import PyCapture2 in ipython, but not in jupyter lab:
 Solutions: 
-Adding conda.pth to "site-packages" directory
+my sys.path is different -- in jupyter, there is one directory missing, compared to in ipython
+
+I added this path by:
+* activating my conda environment, "NectarCamera"
+* running ```(NectarCamera) C:\Users\cswitzer.BEES>conda-develop C:\\Anaconda3\\envs\\NectarCamera\\Scripts
+```added C:\Anaconda3\envs\NectarCamera\Scripts```
+```completed operation for: C:\Anaconda3\envs\NectarCamera\Scripts```
+
+This addes a file called "conda.pth" to "site-packages" directory. And now in jupyter lab, when I run ```sys.path```, I see  ```C:\\Anaconda3\\envs\\NectarCamera\\Scripts```
