@@ -40,8 +40,6 @@ def img2array(image):
     return(np.array(image.getData(), dtype="uint8").reshape( (image.getRows(), image.getCols()) ))
 
 
-
-
     
 # display images via live preview for two cameras
 def livePreview2(conn, c, d):
@@ -62,8 +60,18 @@ def livePreview2(conn, c, d):
         msvcrt.getch()
         print('clearing characters ...')
     
+    print("hi")
+
     cv2.namedWindow('image',cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('image', 1280,500)
+    cv2.resizeWindow('image', 1280,512)
+	
+
+
+    # # These two lines will force your "Main View" window to be on top with focus.
+    # cv2.setWindowProperty('image',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+    # cv2.setWindowProperty('image',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_NORMAL)
+    
+
 
     while(True):
         stt = time.time()
