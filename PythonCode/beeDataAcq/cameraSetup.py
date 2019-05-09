@@ -60,7 +60,6 @@ def livePreview2(conn, c, d):
         msvcrt.getch()
         print('clearing characters ...')
     
-    print("hi")
 
     cv2.namedWindow('image',cv2.WINDOW_NORMAL)
     cv2.resizeWindow('image', 1280,512)

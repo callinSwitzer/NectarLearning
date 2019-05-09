@@ -70,7 +70,7 @@ def serial_ports():
 ## refref: add baseSensorThreshold to the read and reward function, so I can specify from jupyter notebook
 # refref: eventually have mach learning involved to choose these values
 def Reward(serial_con, 
-           numSteps =15, 
+           numSteps =13, 
            rewardSeconds= 2.0, 
            nectarState = "low", 
            saveFileName = "tmp.csv", 
@@ -278,7 +278,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     """
 
 #     timeout = int(maxTime - 1)
-    timeout = 5*60 # five minute timeout
+    timeout = 15*60 # 15 minute timeout
     startTime = time.time()
     tmp = np.empty((1, 8), dtype = '<U260')
     tmp[0, 6] = serial_con.port
@@ -387,7 +387,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                 rewardCounter[flagPos] += 1
                 print("ACTION ", rewardCounter, serial_con.port)
                 
-                Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
+                Reward(serial_con, numSteps=13, rewardSeconds=2.0, dataDir = dataDir,
                        saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
                       baseSensorPosition = baseSensorPosition)
                
@@ -468,7 +468,7 @@ def readAndSave(serial_con = None, maxTime = 600, wait_time = 0,
                         wr.writerows(tmp)
                 
                 #  manually reward bee
-                Reward(serial_con, numSteps=15, rewardSeconds=2.0, dataDir = dataDir,
+                Reward(serial_con, numSteps=13, rewardSeconds=2.0, dataDir = dataDir,
                        saveData = saveData, saveFileName = s, baseSensorThreshold = baseSensorThreshold, 
                       baseSensorPosition = baseSensorPosition)
             # reset note column
@@ -514,7 +514,7 @@ def shamReadAndSave(serial_con = None, maxTime = 600, wait_time = 0,
     """
 
 #     timeout = int(maxTime - 1)
-    timeout = 5*60 # five minute timeout
+    timeout = 15*60 # fifteen minute timeout
     startTime = time.time()
     tmp = np.empty((1, 8), dtype = '<U260')
     tmp[0, 6] = serial_con.port
