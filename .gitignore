@@ -58,6 +58,9 @@ vignettes/*.pdf
 # any sub folders
 # */*
 
+# Examples
+/PySpinExamples
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,4 +1,4 @@
-
+#! python
 
 import numpy as np
 import cv2
@@ -178,14 +178,19 @@ def saveAviHelper2_process(conn, cam, camCal1, cam2, camCal2,
     
     numImages = 0
     tmpDat = np.empty(5, dtype = '<U26')
-
-    avi = fc2.AVIRecorder()
-    avi2 = fc2.AVIRecorder()
+    
+    avi = fc2.FlyCapture2Video()
+    avi2 = fc2.FlyCapture2Video()
     
     # resize calibration images 4x
     camCal1 = camCal1[::10,::10]
     camCal2 = camCal2[::10,::10]
-
+	
+	# OPEN WINDOW
+    
+    cv2.namedWindow('image',cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('image', 1280,512)
+	
     for i in range(maxImgs):
         
         try:
@@ -199,8 +204,6 @@ def saveAviHelper2_process(conn, cam, camCal1, cam2, camCal2,
             frame1 = reduceSize(dat1, (image.getRows(), image.getCols()), proportion = 1/10)
             frame2 = reduceSize(dat2, (image2.getRows(), image2.getCols()), proportion = 1/10)
             
-## refref: here is where I could do some image processing with opencv
-## refref: write to dataset -- timestamp, camera1BeeInFrame, camera2BeeInFrame
             tmpDat[1], tmpDat[2] = beeInImage(camCal1, frame1)
             tmpDat[3], tmpDat[4] = beeInImage(camCal2, frame2)
         
@@ -277,8 +280,8 @@ def saveAviHelper2(conn, cam, cam2, fileFormat, fileName, fileName2, frameRate, 
     
     numImages = 0
 
-    avi = fc2.AVIRecorder()
-    avi2 = fc2.AVIRecorder()
+    avi = fc2.FlyCapture2Video()
+    avi2 = fc2.FlyCapture2Video()
 
     for i in range(maxImgs):
         
@@ -354,7 +357,7 @@ def saveAviHelper2(conn, cam, cam2, fileFormat, fileName, fileName2, frameRate, 
     
     
     
-def main(conn, camCal1, camCal2, directory = "C:\\Users\\Combes4\\Desktop\\TempVids"):
+def main(conn, camCal1, camCal2, directory = "C:\\Users\\cswitzer.BEES\\Desktop\\TempVids"):
     # avi recording function
     bus = fc2.BusManager()
     numCams = bus.getNumOfCameras()
@@ -373,13 +376,11 @@ def main(conn, camCal1, camCal2, directory = "C:\\Users\\Combes4\\Desktop\\TempV
     
     if not os.path.exists(directory):
         os.makedirs(directory)
-    #directory = os.path.join("C:\\Users\\Combes4\Desktop\\temp3")
     movieID = str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S_%f")[:-3])
     fileName = os.path.join(directory,   movieID + "_cam1" + ".avi")
     fileName2 = os.path.join(directory,  movieID + "_cam2" + ".avi")
     csvFileName = os.path.join(directory,  movieID + ".csv")
     conn.send(os.path.join(directory,   movieID))
-#     saveAviHelper2(conn, c,d, "AVI", fileName.encode("utf-8"), fileName2.encode("utf-8"), 10, maxImgs = 10000)
     saveAviHelper2_process(conn, c, camCal1, d, camCal2, 
                            "MJPG", fileName.encode("utf-8"), fileName2.encode("utf-8"), 
                            csvFileName,
