@@ -51,7 +51,7 @@ union(){
         cube([86, 32, 3]);
         
     }}}
-servoStand();
+// servoStand();
     
 
 // cover
@@ -98,9 +98,45 @@ translate([-3.5, -15,50])
 }
 }
 
-translate([0, -25, 56])
-rotate([0, 180, 0])
-photogateHolder();
+
+//translate([0, -25, 56])
+//rotate([0, 180, 0])
+// photogateHolder();
+
+
+// led blocker
+
+module photogateBlocker(){
+translate([0, -65, -0]){
+difference(){
+    
+union(){
+difference(){
+    cylinder(7.5, d1 = 13, d2 = 13);
+    cylinder(9, d1 = 10, d2 = 10);
+    }
+difference(){
+    cylinder(3, d1 = 18, d2 = 18);
+    cylinder(9, d1 = 10, d2 = 10);
+    }
+    
+difference(){
+    cylinder(2, d1 = 24, d2 = 24);
+    cylinder(9, d1 = 10, d2 = 10);
+    }
+}
+ 
+    
+translate([-3.5, -14,0])
+    cube([7,12,8]);
+}
+    
+
+}
+}
+
+photogateBlocker();
+
 
 
 
