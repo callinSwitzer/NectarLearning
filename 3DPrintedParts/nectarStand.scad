@@ -110,6 +110,7 @@ translate([-30, -3, 0.5])
 
 translate([-3.5, -16,52.5])
     cube([7,20,10]);
+
 translate([-20,-18, 49])  
 cube([60, 10, 20]);
 
@@ -136,7 +137,7 @@ translate([-10,3, 50])
 cube([20, 5, 2]);
     
 translate([-10,-8, 50])  
-cube([20, 5, 3]);
+cube([20, 5, 2]);
 }
 
 
@@ -147,6 +148,22 @@ cube([20, 5, 3]);
 translate([0, -25, 56])
 rotate([0, 180, 0])
  photogateHolder();
+
+
+// optionally remove the top
+difference(){
+    
+
+union(){translate([0, 25, 56]){
+    rotate([0, 180, 0])
+     photogateHolder();}}
+   
+union(){translate([0,25,5.5])
+        cylinder(10, d1 = 50, d2 = 50);}
+}
+
+
+
 
 
 // led blocker
