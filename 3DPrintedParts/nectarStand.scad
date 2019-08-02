@@ -55,7 +55,7 @@ union(){
     
 
 // cover
-/*
+
 translate([0, 40, 0])
 difference(){
     // outer diameter
@@ -63,7 +63,7 @@ difference(){
     // inner dia.
     cylinder(55, d1 = 91, d2 = 91);
 }
-*/
+
     
 // IR photogate -- glue to bottom of cup lid
 
@@ -145,22 +145,22 @@ cube([20, 5, 2]);
 }
 
 
-translate([0, -25, 56])
-rotate([0, 180, 0])
- photogateHolder();
+//translate([0, -25, 56])
+//rotate([0, 180, 0])
+// photogateHolder();
 
 
 // optionally remove the top
-difference(){
-    
-
-union(){translate([0, 25, 56]){
-    rotate([0, 180, 0])
-     photogateHolder();}}
-   
-union(){translate([0,25,5.5])
-        cylinder(10, d1 = 50, d2 = 50);}
-}
+//difference(){
+//    
+//
+//union(){translate([0, 25, 56]){
+//    rotate([0, 180, 0])
+//     photogateHolder();}}
+//   
+//union(){translate([0,25,5.5])
+//        cylinder(10, d1 = 50, d2 = 50);}
+//}
 
 
 
