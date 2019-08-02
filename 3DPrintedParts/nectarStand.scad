@@ -75,33 +75,78 @@ difference(){
 translate([0, 0, 50]){
     difference(){
         difference(){
-    cylinder(6, d1 = 29, d2 = 29);
-    cylinder(7, d1 = 19, d2 = 19);
+            
+    cylinder(7.5, d1 = 30, d2 = 30);
+    translate([0,0,-1]) cylinder(10, d1 = 15, d2 = 15);
     }
     
-    translate([9, 0, 2.5])
+    translate([8, 0, 3.5])
     rotate([0, 90,0])
     cylinder(7, d1 = 5.5, d2 = 6, $fn=20);
     
-    translate([-16, 0, 2.5])
+    translate([-15, 0, 3.5])
     rotate([0, 90,0])
     cylinder(7, d1 = 6, d2 = 5.5, $fn=20);
     
+    
+translate([-30, -3, 0.5])
+    cube([50, 6, 2]);
+    
+    translate([-15, -3, 0.5])
+    cube([7, 6, 3]);
+
+    translate([8, -3, 0.5])
+    cube([7, 6, 3]);
+
 
 }
+
+
+
+
+
 
 };  
-translate([-3.5, -15,50])
-    cube([7,8,8]);
+
+translate([-3.5, -16,52.5])
+    cube([7,20,10]);
+translate([-20,-18, 49])  
+cube([60, 10, 20]);
+
+translate([-20,8, 49])  
+cube([60, 10, 20]);
 
 }
-}
+
+translate([0,0, 52])
+difference(){
+            
+   cylinder(0.5, d1 = 16, d2 = 16);
+    translate([0,0,-1]) cylinder(5, d1 = 5, d2 = 5, $fn=20);
+    }
+    
+translate([0,0, 50])
+difference(){
+            
+   cylinder(0.5, d1 = 16, d2 = 16);
+    translate([0,0,-1]) cylinder(5, d1 = 8, d2 = 8, $fn=20);
+    } 
+ 
+translate([-10,3, 50])  
+cube([20, 5, 2]);
+    
+translate([-10,-8, 50])  
+cube([20, 5, 3]);
 }
 
 
-//translate([0, -25, 56])
-//rotate([0, 180, 0])
-// photogateHolder();
+
+}
+
+
+translate([0, -25, 56])
+rotate([0, 180, 0])
+ photogateHolder();
 
 
 // led blocker
@@ -135,7 +180,7 @@ translate([-3.5, -14,0])
 }
 }
 
-photogateBlocker();
+//photogateBlocker();
 
 
 
