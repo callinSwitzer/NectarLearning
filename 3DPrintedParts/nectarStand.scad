@@ -55,13 +55,15 @@ union(){
     
 
 // cover
+    
+    module cover(){
 
 translate([0, 40, 0])
 difference(){
     // outer diameter
-    cylinder(40, d1 = 93, d2 = 93); 
+    cylinder(40, d1 = 90, d2 = 90); 
     // inner dia.
-    cylinder(55, d1 = 91, d2 = 91);
+    cylinder(55, d1 = 88, d2 = 88);
 }
 
     
@@ -143,6 +145,8 @@ cube([20, 5, 2]);
 
 
 }
+}
+//cover();
 
 
 //translate([0, -25, 56])
@@ -201,6 +205,80 @@ translate([-3.5, -14,0])
 
 
 
+// nectar cover top
+module topCover(){
+intersection(){
+translate([0, 40, 50])
+difference(){
+    // outer diameter
+    cylinder(2, d1 = 94, d2 = 94); 
+    
+    cylinder(2, d1 = 10, d2 = 10); 
+}
+
+
+union(){color("red")
+translate([5,-10,50])
+cube([10, 100, 2]);
+
+
+color("red")
+rotate([0,0,80])
+translate([24,-40,50])
+cube([10, 100, 2]);
+    
+    color("blue")
+rotate([0,0,130])
+translate([30,-10,50])
+cube([10, 100, 2]);
+
+color("blue")
+rotate([0,0,130])
+translate([30,-140,50])
+cube([10, 100, 2]);
+    
+
+    
+    
+    }
+    
+
+
+
+}}
+
+    
+
+module supportBeams (){
+    translate([13,0,50])
+cube([2, 80, 4]);
+
+rotate([0,0,80])
+translate([24,-33, 50])
+cube([2, 80, 4]);}
+
+union(){
+topCover();
+    supportBeams();
+}
+
+
+
+
+
+//module triangle(){
+//translate([0,20,50])
+//linear_extrude(height = 10, center = true, convexity = 10, twist = 0)
+//rotate([0,0,0])        
+//polygon( points=[[0,-80],[80,-20],[00,20]] );}
+//
+//
+//
+//color("red")
+//translate([40, 40, 0])
+//rotate([0,0, 90])
+//
+//triangle();
 
 
 
