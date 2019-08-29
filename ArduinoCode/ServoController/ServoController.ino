@@ -17,7 +17,7 @@ int val;
 int servoPosition; 
 
 void setup() {
-  Serial.begin(9600);  
+  Serial.begin(19200);  
   myservo.attach(servoDigitalPin);  // attaches the servo on pin XX to the servo object
 }
 
