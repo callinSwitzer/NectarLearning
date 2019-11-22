@@ -138,7 +138,7 @@ def main(conn):
     d.startCapture()
     
     # live preview
-    livePreview2(conn, c,d)
+    livePreview2(conn, c, d)
     
     # When everything done, release the capture
     #c.stopCapture()
